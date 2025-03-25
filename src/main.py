@@ -148,21 +148,60 @@ def stop(ms):
 # region signs
 
 def detect_signs():
-    # detect signs in the environment
-    # determine type (victim, hazard)
-    # call ckeck_victims() or check_hazards()
-    # report to emitter
-    
     # get image from rcam
     img = rcam.getImage()
-    # img = np.frombuffer(img, np.uint8).reshape((rcam.getHeight(), rcam.getWidth(), 4))
-    check_victims(img, rcam);
+    if img: 
+        if check_sign(img, rcam):
+            return
     
     # get image from lcam
     img = lcam.getImage()
-    # img = np.frombuffer(img, np.uint8).reshape((lcam.getHeight(), lcam.getWidth(), 4))
-    check_victims(img, rcam);
-    pass
+    if img:
+        if check_sign(img, lcam):
+            return
+
+def check_sign(img, cam):
+    img = np.frombuffer(img, np.uint8).reshape((cam.getHeight(), cam.getWidth(), 4))
+    img = cv.cvtColor(img, cv.COLOR_BGRA2BGR)
+    gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    
+    # Apply thresholding to get binary image
+    _, thresh = cv.threshold(gray, 80, 255, cv.THRESH_BINARY_INV)
+    
+    # Find contours in the thresholded image
+    contours, _ = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    
+    for cnt in contours:
+        # Approximate the contour to a polygon
+        epsilon = 0.02 * cv.arcLength(cnt, True)
+        approx = cv.approxPolyDP(cnt, epsilon, True)
+        
+        # Check if the polygon has 4 vertices (potential square or rhombus)
+        if len(approx) == 4:
+            # Calculate the angles between the vertices
+            angles = []
+            for i in range(4):
+                p1 = approx[i][0]
+                p2 = approx[(i + 1) % 4][0]
+                p3 = approx[(i + 2) % 4][0]
+                
+                v1 = p1 - p2
+                v2 = p3 - p2
+                
+                angle = np.arccos(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)))
+                angles.append(np.degrees(angle))
+            
+            # Check if the angles are close to 90 degrees (square) or 45/135 degrees (rhombus)
+            if all(80 <= angle <= 100 for angle in angles):
+                print("Square detected") if DEBUG else None
+                check_victims(img, cam)
+                return True
+            elif all(40 <= angle <= 50 or 130 <= angle <= 140 for angle in angles):
+                print("Rhombus detected") if DEBUG else None
+                check_hazards(img, cam)
+                return True
+    
+    return False
 
 def check_victims(img, cam):
     # H S U
@@ -210,35 +249,30 @@ def check_hazards(img):
     # F P . .
     pass
 
-def check_victim(img):
-    img = np.frombuffer(img, np.uint8).reshape((cam.getHeight(), cam.getWidth(), 4))
-    img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-    img, thresh = cv.threshold(img, 80, 255, cv.THRESH_BINARY_INV)
-    
-    contours, heirarchy = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-    
-    for cnt in contours:
-        x, y, w, h = cv.boundingRect(cnt)
-        contArea = cv.contourArea(cnt)
-        ratio = w / h
-        
-        if contArea > 300 and contArea < 1000 and ratio > 0.65 and ratio < 0.95:
-            return True
-    return False
+reported_victims = []
 
+def report(sign_type):
+    global reported_victims
 
-def report(victim_type):
-    # stop robot for 1300ms
     stop(1300)
-    
-    victim_type = bytes(victim_type, "utf-8")
-    pos_x = int(gps.getValues()[0] * 100) # convert to cm
+    pos_x = int(gps.getValues()[0] * 100)  # Convert to cm
     pos_z = int(gps.getValues()[2] * 100)
     
-    msg = struct.pack("i i c", pos_x, pos_z, victim_type)
+    if (pos_x, pos_z) in reported_victims:
+        print(f"Victim at ({pos_x}, {pos_z}) already reported.") if DEBUG else None
+        return
+    
+    reported_victims.append((pos_x, pos_z))
+    
+    sign_type = bytes(sign_type, "utf-8")
+    msg = struct.pack("i i c", pos_x, pos_z, sign_type)
+    
     emitter.send(msg)
     robot.step(timestep)
     
+    if DEBUG:
+        print(f"Reported victim of type '{sign_type.decode()}' at ({pos_x}, {pos_z}).")
+
 # endregion
 
 # region map
@@ -354,6 +388,103 @@ def map_env():
     # expand map if necesssary
     # update map
     
+# endregion
+
+# region movement
+
+visited_tiles = set()
+# approach 1: grid exploration
+def grid_exploration():
+    global pos_x, pos_z
+
+    current_tile = (pos_x // TILE_SIZE, pos_z // TILE_SIZE)
+    if current_tile not in visited_tiles:
+        visited_tiles.add(current_tile)
+        print(f"Visited tile: {current_tile}")
+
+    # Move to the next unvisited tile
+    if front_dist < 0.2:  # Obstacle in front
+        turn_right()
+    else:
+        speeds[0] = max_velocity
+        speeds[1] = max_velocity
+        
+# approach 2: frontier exploration
+def frontier_exploration():
+    global grid_map
+
+    # Identify frontiers (cells adjacent to unexplored areas)
+    frontiers = []
+    for x in range(grid_map.shape[0]):
+        for z in range(grid_map.shape[1]):
+            if grid_map[x, z] == 1:  # Explored cell
+                for dx, dz in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                    nx, nz = x + dx, z + dz
+                    if 0 <= nx < grid_map.shape[0] and 0 <= nz < grid_map.shape[1]:
+                        if grid_map[nx, nz] == 0:  # Unexplored cell
+                            frontiers.append((nx, nz))
+
+    if frontiers:
+        # Move toward the nearest frontier
+        target = frontiers[0]
+        print(f"Moving to frontier: {target}")
+        # Implement path planning to move to the target
+
+# approach 3: flood fill
+def flood_fill(x, z):
+    global grid_map, visited_tiles
+
+    # Convert the robot's position to grid coordinates
+    grid_x, grid_z = int(x // TILE_SIZE), int(z // TILE_SIZE)
+
+    # Check if the current cell is out of bounds or already visited
+    if grid_x < 0 or grid_x >= map_size[0] or grid_z < 0 or grid_z >= map_size[1]:
+        return
+    if (grid_x, grid_z) in visited_tiles or grid_map[grid_x, grid_z] == 2:  # 2 = obstacle
+        return
+
+    # Mark the current cell as visited
+    visited_tiles.add((grid_x, grid_z))
+    print(f"Visited tile: ({grid_x}, {grid_z})")
+
+    # Move to adjacent cells (front, back, left, right)
+    move_to_tile(grid_x + 1, grid_z)  # Move right
+    flood_fill((grid_x + 1) * TILE_SIZE, grid_z * TILE_SIZE)
+
+    move_to_tile(grid_x - 1, grid_z)  # Move left
+    flood_fill((grid_x - 1) * TILE_SIZE, grid_z * TILE_SIZE)
+
+    move_to_tile(grid_x, grid_z + 1)  # Move forward
+    flood_fill(grid_x * TILE_SIZE, (grid_z + 1) * TILE_SIZE)
+
+    move_to_tile(grid_x, grid_z - 1)  # Move backward
+    flood_fill(grid_x * TILE_SIZE, (grid_z - 1) * TILE_SIZE)
+
+def move_to_tile(target_x, target_z):
+    global pos_x, pos_z, compass_data
+
+    # Calculate the direction to the target tile
+    dx = target_x - pos_x
+    dz = target_z - pos_z
+    angle_to_target = math.atan2(dz, dx)
+
+    # Rotate the robot to face the target direction
+    while abs(compass_data - angle_to_target) > 0.1:
+        if compass_data < angle_to_target:
+            turn_left()
+        else:
+            turn_right()
+
+    # Move forward to the target tile
+    speeds[0] = max_velocity
+    speeds[1] = max_velocity
+    while abs(pos_x - target_x) > 0.1 or abs(pos_z - target_z) > 0.1:
+        get_sensor_data()
+        robot.step(timestep)
+
+    # Stop the robot
+    stop(100)
+
 # endregion
 
 # region main
