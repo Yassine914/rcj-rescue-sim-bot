@@ -10,8 +10,8 @@ timestep = int(robot.getBasicTimeStep())
 max_velocity = 6.28
 
 # Initialize devices with correct names
-rwheel = robot.getDevice("right wheel motor")
-lwheel = robot.getDevice("left wheel motor")
+rwheel = robot.getDevice("right_wheel motor")
+lwheel = robot.getDevice("left_wheel motor")
 rwheel.setPosition(float("inf"))
 lwheel.setPosition(float("inf"))
 
