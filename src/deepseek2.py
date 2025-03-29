@@ -33,7 +33,7 @@ compass = robot.getDevice("inertial_unit")
 compass.enable(timestep)
 
 # Navigation parameters
-TILE_SIZE = 0.12
+TILE_SIZE = 12
 ROTATION_TOLERANCE = math.radians(3)
 MOVEMENT_SPEED = 5.0
 ROTATION_SPEED = 4.0
@@ -60,8 +60,8 @@ def get_colour_sensor_values():
 
 def get_current_pose():
     position = gps.getValues()
-    grid_x = int(round(position[0] / TILE_SIZE))
-    grid_z = int(round(position[2] / TILE_SIZE))
+    grid_x = position[0] * 100 / TILE_SIZE
+    grid_z = position[2] * 100 / TILE_SIZE
     yaw = compass.getRollPitchYaw()[2]
     return (grid_x, grid_z), yaw
 
