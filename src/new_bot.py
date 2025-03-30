@@ -174,7 +174,6 @@ class RescueBot:
 
     # helper functions
     def detect_sign(self):
-        # return False; # TODO: remove this line
         img = self.rcam.getImage()
         if img:
             if self.check_sign(img, "RIGHT"):
