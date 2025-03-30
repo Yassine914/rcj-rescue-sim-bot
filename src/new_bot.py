@@ -89,10 +89,17 @@ class RescueBot:
         self.color_data.append(b)
         
         # lidar data
-        self.lidar_data = np.zeros((2, 360), dtype=np.float32)
-        for i in range(360):
-            self.lidar_data[0, i] = self.lidar.getRangeImage()[i]
-            
+        self.lidar_values = []
+        range_image = self.lidar.getRangeImage()
+        for layer in range(4):
+            self.lidar_values.append([])
+            for point in range(512):
+                self.lidar_values[layer].append(
+                    round(
+                        range_image[layer * 512 + point] * 100, 2
+                    )
+                ) 
+
         self.reported_victims = []
  
     def state_machine(self):
@@ -167,6 +174,7 @@ class RescueBot:
 
     # helper functions
     def detect_sign(self):
+        # return False; # TODO: remove this line
         img = self.rcam.getImage()
         if img:
             if self.check_sign(img, "RIGHT"):
@@ -327,11 +335,9 @@ class RescueBot:
         self.delay(duration)
 
     def check_obstacle(self):
-        # Check lidar data for obstacles
-        for angle in range(360):
-            if self.lidar_data[angle] < 0.5:
-                print("Obstacle detected!") if DEBUG else None
-                return True
+        if self.lidar_values[2][0] < 0.5:
+            print("Obstacle detected!") if DEBUG else None
+            return True
         return False
 
 # Main execution
