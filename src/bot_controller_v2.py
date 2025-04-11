@@ -6,6 +6,7 @@ import struct
 
 RED_THRESHOLD = 30  # The threshold for the red color in the image
 TILE_WIDTH = 12 # the width of the tile in cm
+BLACK_THRESHOLD = 60 # The threshold for the black color in the image (holes)
 
 timeStep = 32
 max_velocity = 6.28
@@ -81,7 +82,6 @@ def get_colour_sensor_value():
     color_sensor_values[0] = r
     color_sensor_values[1] = g
     color_sensor_values[2] = b
-
 
 def turn_90(right = True):
 
@@ -170,25 +170,25 @@ def get_lidar_directions():
     for i in range(-15,15):
         if lidar_values[2][i] < 7:
             lidar_front = True
-            print(lidar_values[2][0])
+            # print(lidar_values[2][0])
 
     for i in range(112, 142):
         if lidar_values[2][i] < 7:
             lidar_right = True
-            print(lidar_values[2][127])
+            # print(lidar_values[2][127])
 
 
     for i in range(246 - 5, 266 + 5):
         if lidar_values[2][i] < 7:
             lidar_back = True
-            print(lidar_values[2][256])
+            # print(lidar_values[2][256])
 
 
     for i in range(373 - 5, 393 + 5):
         if lidar_values[2][i] < 7:
             lidar_left = True
-            print(lidar_values[2][3])
-            print(lidar_values[2][370])
+            # print(lidar_values[2][3])
+            # print(lidar_values[2][370])
 
 def stop(duration):
     # we call robot.step but with wheel velocities set to 0
@@ -246,14 +246,11 @@ def move_one_tile():
             x_new = x
             y_new = y + TILE_WIDTH
             
-    # return "hole" if color sensor reads black
-    if color_sensor_values[0] < 50 and color_sensor_values[1] < 50 and color_sensor_values[2] < 50:
-        return "hole"
-
     while robot.step(timeStep) != -1:
 
         # whenever the robot is moving, we should get the sensor values to update the global variables
         get_all_sesnor_values()
+        print_info()
         detect_victims(img_right, camera_right)
         detect_victims(img_left, camera_left)
 
@@ -302,6 +299,10 @@ def move_one_tile():
             # if the robot is moving vertically, we should check if the robot reached the new y coordinate
             if y_new - 1 < gps_readings[2] < y_new + 1:
                 break
+            
+        # return "hole" if color sensor reads black
+        if color_sensor_values[0] < BLACK_THRESHOLD and color_sensor_values[1] < BLACK_THRESHOLD and color_sensor_values[2] < BLACK_THRESHOLD:
+            return "hole"
 
 def should_scan():
     # check if the robot has scanned the sign before
@@ -383,18 +384,22 @@ def detect_victims(image_data, camera):
 def navigate():
     global counter
 
-while robot.step(timeStep) != -1:
-
-    # whenever the robot is moving, we should get the sensor values to update the global variables
-    get_all_sesnor_values()
-    detect_victims(img_right, camera_right)
-    detect_victims(img_left, camera_left)
+def print_info():
     print("---------------------------------")
     print(f"Compass value:  {compass_value}")
     print(f"gps readings:  {gps_readings}")
     print(f"Color sensor values:  {color_sensor_values}")
     print("---------------------------------")
 
+while robot.step(timeStep) != -1:
+
+    # whenever the robot is moving, we should get the sensor values to update the global variables
+    get_all_sesnor_values()
+    detect_victims(img_right, camera_right)
+    detect_victims(img_left, camera_left)
+    
+    print_info()
+    
     coords_right = detect_victims(camera_right.getImage(), camera_right)
     coords_left = detect_victims(camera_left.getImage(), camera_left)
 
