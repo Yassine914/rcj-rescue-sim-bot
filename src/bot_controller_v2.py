@@ -4,6 +4,9 @@ import numpy as np
 import cv2 as cv
 import struct
 
+RED_THRESHOLD = 30  # The threshold for the red color in the image
+TILE_WIDTH = 12 # the width of the tile in cm
+
 timeStep = 32
 max_velocity = 6.28
 robot = Robot()
@@ -32,7 +35,6 @@ camera_right.enable(timeStep)
 camera_left.enable(timeStep)
 color_sensor.enable(timeStep)
 lidar.enable(timeStep)
-
 
 gps_readings = [0, 0, 0]
 compass_value = 0
@@ -90,24 +92,21 @@ def turn_90(right = True):
     compass_value_rounded_to_nearest_90 = round(compass_value / 90) * 90
 
     # then add or subtract 90 to get the next angle the robot should move to
-    if right:
-        # subtract 90 if the robot should turn right
+    
+    if right: # subtract 90 if the robot should turn right
         next_angle = compass_value_rounded_to_nearest_90 - 90
-    else :
-        # add 90 if the robot should turn left
+    else: # add 90 if the robot should turn left
         next_angle = compass_value_rounded_to_nearest_90 + 90
 
 
     # to make sure that the angle is between -180 to 180
     if next_angle > 180:
         next_angle -= 360
-
     elif next_angle < -180:
         next_angle += 360
 
     # see if robot should turn left or right then set the wheel velocities accordingly
     if right:
-
         s1 =-3
         s2 = 3
     else:
@@ -191,16 +190,11 @@ def get_lidar_directions():
             print(lidar_values[2][3])
             print(lidar_values[2][370])
 
-
-
-
-def stop():
+def stop(duration):
     # we call robot.step but with wheel velocities set to 0
     # the simulation will keep running but the robot will stop
 
-    #TODO: pass duration as a parameter
-
-    stop = 5000
+    stop = duration
     while robot.step(timeStep) != -1:
         # keep looping until 5000ms pass then break the loop
         wheel1.setVelocity(0)
@@ -225,9 +219,9 @@ def move_one_tile():
     x = gps_readings[0]
     y = gps_readings[2]
 
-    # round x and y to nearest multiple of 12 (because the tiles are 12x12)
-    x = round(x / 12) * 12
-    y = round(y / 12) * 12
+    # round x and y to nearest multiple of 12
+    x = round(x / TILE_WIDTH) * TILE_WIDTH
+    y = round(y / TILE_WIDTH) * TILE_WIDTH
 
     # if the robot is facing horizontally (90 or -90) we should move in the x direction, so x should change and y should stay the same
     # if the robot is facing vertically (0 or 180) we should move in the y direction, so y should change and x should stay the same
@@ -235,22 +229,26 @@ def move_one_tile():
     if compass_value_rounded_to_nearest_90 in (90, -90):
         if compass_value_rounded_to_nearest_90 == 90:
             # if the robot is facing 90, then we should move to the left, so we subtract 12 from x
-            x_new = x - 12
+            x_new = x - TILE_WIDTH
             y_new = y
         else:
             # if the robot is facing -90, then we should move to the right, so we add 12 to x
-            x_new = x + 12
+            x_new = x + TILE_WIDTH
             y_new = y
 
     else:
         # if the robot is facing 0, then we should move up, so we subtract 12 from y
         if compass_value_rounded_to_nearest_90 == 0:
             x_new = x
-            y_new = y - 12
+            y_new = y - TILE_WIDTH
         else:
             # if the robot is facing 180, then we should move down, so we add 12 to y
             x_new = x
-            y_new = y + 12
+            y_new = y + TILE_WIDTH
+            
+    # return "hole" if color sensor reads black
+    if color_sensor_values[0] < 50 and color_sensor_values[1] < 50 and color_sensor_values[2] < 50:
+        return "hole"
 
     while robot.step(timeStep) != -1:
 
@@ -284,9 +282,10 @@ def move_one_tile():
         wheel2.setVelocity(s2)
 
 
-        # the robot stops moving in two cases:
+        # the robot stops moving in 3 cases:
         # 1. the robot sees an object in front of him
         # 2. the robot reaches the new x coordinate (if he is moving horizontally) or the new y coordinate (if he is moving vertically)
+        # 3. there is a hole infront of the robot (we check the colour sensor to see if it is black)
 
         # if the robot sees an object in front of him, we break the loop, then the function will end
         if lidar_front:
@@ -304,7 +303,6 @@ def move_one_tile():
             if y_new - 1 < gps_readings[2] < y_new + 1:
                 break
 
-
 def should_scan():
     # check if the robot has scanned the sign before
     # loop the scanned signs check for a near colunms
@@ -313,7 +311,7 @@ def should_scan():
             math.pow(gps_readings[0] - point[0], 2) +
             math.pow(gps_readings[2] - point[1], 2)
         )
-        if dist < 10:
+        if dist < 10: # no 2 signs are closer than 10cm so we should be at an already scanned sign
             return False
     return True
 
@@ -327,10 +325,12 @@ def detect(img):
 
     red_count = cv.countNonZero(red_mask)
 
-    if red_count > 25:
-        stop()
+    # detect if there is red
+    if red_count > RED_THRESHOLD:
+        stop(3000)
 
-        victimType = bytes('F', "utf-8")  # The victim type being sent is the letter 'H' for harmed victim
+        # TODO: check if the red sign is F (flammable) or O (organic) [depending on the 'orange-ness' of the lower half]
+        victimType = bytes('F', "utf-8")  # The victim type being sent is the letter 'F' for flammable  
 
         position = gps.getValues()  # Get the current gps position of the robot
         x = int(position[0] * 100)  # Get the xy coordinates, multiplying by 100 to convert from meters to cm
@@ -342,10 +342,15 @@ def detect(img):
 
         emitter.send(message)  # Send out the message
 
-        stop()
+        stop(3000)
 
         print("------------------------------Victim detected at: ", x, y)
         return
+    
+    # TODO: detect any other sign
+    
+    #       differentiate between hazards and victims
+    #       send the type of hazard or victim to the emitter
 
     lower_yellow = [20, 100, 100]
     upper_yellow = [30, 255, 255]
