@@ -374,7 +374,7 @@ def detect_victims(image_data, camera):
         # Calculate the bounding rectangle of the contour
         x, y, w, h = cv.boundingRect(contour)
 
-        # Check if the contour is large enough to be a victim
+        # Check if the contour is large enough to be a sign
         if cv.contourArea(contour) > 500 and w / h < 2 and 5 < x < 25 and y < 25:
             # Crop the image
             cropped_image = img[y:y + h, x:x + w]
