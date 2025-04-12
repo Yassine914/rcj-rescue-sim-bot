@@ -347,41 +347,22 @@ def report(type):
 def detect(img):
     print("-----------------detecting sign-------------------------------")
     
-    # lower_red = [170, 150, 150]
-    # upper_red = [180, 255, 255]
-    # hsv = cv.cvtColor(img, cv.COLOR_BGR2HSV)
-
-    # red_mask = cv.inRange(hsv, np.array(lower_red), np.array(upper_red))
-
-    # red_count = cv.countNonZero(red_mask)
-
-    # # detect if there is red for F and O hazards
-    # if red_count > RED_THRESHOLD:
-    #     stop(3000)
-
-    #     # TODO: check if the red sign is F (flammable) or O (organic) [depending on the 'orange-ness' of the lower half]
-    #     report('F')
-    #     # report('O')
-    #     return
-    
-    # # TODO: detect any other sign
-    
-    # #       differentiate between hazards and victims
-    # #       send the type of hazard or victim to the emitter
-
-    # lower_yellow = [20, 100, 100]
-    # upper_yellow = [30, 255, 255]
-    
-    # TODO: DETECTION
-    
+    # check it has any red
     sign_type = detect_F_O(img)
-    if sign_type == 'N':
-        sign_type = detect_victims(img, camera_right) # TODO: fix this function
-        
-    if sign_type == 'N':
-        sign_type = detect_P_C(img) # TODO: make this function
-
     
+    # if no red then it might be a letter
+    if sign_type == 'N':
+        # FIXME: letter detection gives a lot of errors rn
+        sign_type, bottom = detect_letters_old(img)
+        
+    # if it's not a letter then it must be P or C
+    if sign_type == 'N':
+        sign_type = detect_P_C(img)
+        
+    report(sign_type);
+    
+    print("-------------------------------------sign type: ", sign_type)
+
     # need to stop the robot for some time to detect the sign
     stop(2500)
     return
@@ -462,9 +443,111 @@ def detect_P_C(sign) -> str:
         
     return sign_type
 
+def detect_letters_old(sign) -> str:
+    img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    _, thresh = cv.threshold(img, 80, 255, cv.THRESH_BINARY_INV)
+    
+    height, width = thresh.shape
+    section_width = width // 3
+    
+    first_section = thresh[:, :section_width]
+    # ignore the middle section
+    third_section = thresh[:, 2 * section_width:]
+    
+    contours_first, _ = cv.findContours(first_section, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    contours_third, _ = cv.findContours(third_section, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    
+    # output image for debugging
+    cv.imshow("First Section", first_section)
+    cv.imshow("Third Section", third_section)
+    cv.waitKey(1)
+    
+    num_contours_first = len(contours_first)
+    num_contours_third = len(contours_third)
+    
+    print("First Section Contours: ", num_contours_first)
+    print("Third Section Contours: ", num_contours_third)
+    
+    if num_contours_first == 1 and num_contours_third == 1:
+        print("found H")
+        report('H')
+        return 'H'
+    elif num_contours_first == 2 and num_contours_third == 2:
+        print("found S")
+        report('S')
+        return 'S'
+    elif num_contours_first == 3 and num_contours_third == 3:
+        print("found U")
+        report('U')
+        return 'U'
+    else:
+        return None
+
 # NOTE: returns N (Not H, S, U), H, S, or U
 def detect_letters(sign) -> str:
-    return 'N' # TODO: implement this function
+    # FIXME: I think letter is not correct somehow (it should have a height and a width)
+    # invert the image
+    letter = cv.bitwise_not(sign)
+
+    # filling the background of the img with black
+    h, w = letter.shape
+    for x in range(0, h):
+        for y in range(0, w):
+            pixel = letter[x, y]
+
+            if pixel < 20:
+                break
+            else:
+                letter[x, y] = (0)
+
+        for y_inversed in range(w - 1, 0, -1):
+            pixel = letter[x, y_inversed]
+            if pixel < 20:
+                break
+            else:
+                letter[x, y_inversed] = (0)
+
+    # find contours in the letter img
+    cnts = cv.findContours(letter, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    cnts = cnts[0] if len(cnts) == 2 else cnts[1]
+
+    for c in cnts:
+        (x, y, w, h) = cv.boundingRect(c)
+        # crop the img to the letter itself
+        letter = letter[y:y + h, x:x + w]
+
+    # letter detection
+    h, w = letter.shape
+    letter_type = 'N'
+
+    third = h // 3
+    top = letter[:third, :]
+    middle = letter[third:third * 2, :]
+    bottom = letter[third * 2:, :]
+
+    # finding contours in the three part of the image to be able to recognize the letter
+    cnts = cv.findContours(top, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    cnts = cnts[0] if len(cnts) == 2 else cnts[1]
+    c1 = (len(cnts))
+
+    cnts = cv.findContours(middle, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    cnts = cnts[0] if len(cnts) == 2 else cnts[1]
+    c2 = (len(cnts))
+
+    cnts = cv.findContours(bottom, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    cnts = cnts[0] if len(cnts) == 2 else cnts[1]
+    c3 = (len(cnts))
+
+    # check whether a letter is detected and change the bool value if yes
+    # print ("LETTER CODE: ", c1,c2,c3)
+    if c1 == 1 and c3 == 1:
+        letter_type = 'S'
+    elif c1 == 2 and c2 == 1 and c3 == 2:
+        letter_type = 'H'
+    elif c1 == 2 and c2 == 2 and c3 == 1:
+        letter_type = 'U'
+
+    return letter_type, bottom
 
 # endregion
 
