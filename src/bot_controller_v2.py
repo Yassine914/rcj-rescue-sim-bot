@@ -4,6 +4,8 @@ import numpy as np
 import cv2 as cv
 import struct
 
+# region globals
+
 RED_THRESHOLD = 30  # The threshold for the red color in the image
 TILE_WIDTH = 12 # the width of the tile in cm
 BLACK_THRESHOLD = 60 # The threshold for the black color in the image (holes)
@@ -51,6 +53,10 @@ scanned_signs = []
 img_right = None
 img_left = None
 
+# endregion
+
+# region sensor_data
+
 # a function to add the gps readings to the gps_readings list
 def get_gps_readings():
     gps_readings[0] = gps.getValues()[0]*100
@@ -83,51 +89,6 @@ def get_colour_sensor_value():
     color_sensor_values[1] = g
     color_sensor_values[2] = b
 
-def turn_90(right = True):
-
-    # in this function, first we set the wheel velocities and the angle the robot should move to
-    # then we start moving the robot using the while loop
-
-    # round current robot angle to the nearest multiple of 90 (0, 90, 180, -90)
-    compass_value_rounded_to_nearest_90 = round(compass_value / 90) * 90
-
-    # then add or subtract 90 to get the next angle the robot should move to
-    
-    if right: # subtract 90 if the robot should turn right
-        next_angle = compass_value_rounded_to_nearest_90 - 90
-    else: # add 90 if the robot should turn left
-        next_angle = compass_value_rounded_to_nearest_90 + 90
-
-
-    # to make sure that the angle is between -180 to 180
-    if next_angle > 180:
-        next_angle -= 360
-    elif next_angle < -180:
-        next_angle += 360
-
-    # see if robot should turn left or right then set the wheel velocities accordingly
-    if right:
-        s1 =-3
-        s2 = 3
-    else:
-        s1 = 3
-        s2 = -3
-
-    # start moving the robot
-    while robot.step(timeStep) != -1:
-        # whenever the robot is moving, we should get the sensor values to update the global variables
-        get_all_sesnor_values()
-        detect_victims(img_right, camera_right)
-        detect_victims(img_left, camera_left)
-
-        # move the robot with the calculated wheel velocities
-        wheel1.setVelocity(s1)
-        wheel2.setVelocity(s2)
-
-        # check if robot is close to the next angle he should move to (if difference is smaller than 7)
-        if abs(compass_value - next_angle) < 7:
-            # robot is close to next angle then we should break the loop
-            break
 
 def get_lidar_values():
     global lidar_values
@@ -189,6 +150,56 @@ def get_lidar_directions():
             lidar_left = True
             # print(lidar_values[2][3])
             # print(lidar_values[2][370])
+
+# endregion
+
+# region movement
+
+def turn_90(right = True):
+
+    # in this function, first we set the wheel velocities and the angle the robot should move to
+    # then we start moving the robot using the while loop
+
+    # round current robot angle to the nearest multiple of 90 (0, 90, 180, -90)
+    compass_value_rounded_to_nearest_90 = round(compass_value / 90) * 90
+
+    # then add or subtract 90 to get the next angle the robot should move to
+    
+    if right: # subtract 90 if the robot should turn right
+        next_angle = compass_value_rounded_to_nearest_90 - 90
+    else: # add 90 if the robot should turn left
+        next_angle = compass_value_rounded_to_nearest_90 + 90
+
+
+    # to make sure that the angle is between -180 to 180
+    if next_angle > 180:
+        next_angle -= 360
+    elif next_angle < -180:
+        next_angle += 360
+
+    # see if robot should turn left or right then set the wheel velocities accordingly
+    if right:
+        s1 =-3
+        s2 = 3
+    else:
+        s1 = 3
+        s2 = -3
+
+    # start moving the robot
+    while robot.step(timeStep) != -1:
+        # whenever the robot is moving, we should get the sensor values to update the global variables
+        get_all_sesnor_values()
+        detect_victims(img_right, camera_right)
+        detect_victims(img_left, camera_left)
+
+        # move the robot with the calculated wheel velocities
+        wheel1.setVelocity(s1)
+        wheel2.setVelocity(s2)
+
+        # check if robot is close to the next angle he should move to (if difference is smaller than 7)
+        if abs(compass_value - next_angle) < 7:
+            # robot is close to next angle then we should break the loop
+            break
 
 def stop(duration):
     # we call robot.step but with wheel velocities set to 0
@@ -304,6 +315,9 @@ def move_one_tile():
         if color_sensor_values[0] < BLACK_THRESHOLD and color_sensor_values[1] < BLACK_THRESHOLD and color_sensor_values[2] < BLACK_THRESHOLD:
             return "hole"
 
+# endregion
+
+# region detect_signs
 def should_scan():
     # check if the robot has scanned the sign before
     # loop the scanned signs check for a near colunms
@@ -316,46 +330,61 @@ def should_scan():
             return False
     return True
 
+def report(type):
+    victimType = bytes(type, "utf-8")
+    
+    pos = gps.getValues()
+    x = int(pos[0] * 100)
+    z = int(pos[2] * 100)
+    scanned_signs.append((x, z))
+    
+    message = struct.pack("i i c", x, z, victimType)  # Pack the message.
+    emitter.send(message)
+    
+    print("------------------------------Victim detected at: ", x, z, "of type: ", type)
+    
 
 def detect(img):
-    lower_red = [170, 150, 150]
-    upper_red = [180, 255, 255]
-    hsv = cv.cvtColor(img, cv.COLOR_BGR2HSV)
-
-    red_mask = cv.inRange(hsv, np.array(lower_red), np.array(upper_red))
-
-    red_count = cv.countNonZero(red_mask)
-
-    # detect if there is red
-    if red_count > RED_THRESHOLD:
-        stop(3000)
-
-        # TODO: check if the red sign is F (flammable) or O (organic) [depending on the 'orange-ness' of the lower half]
-        victimType = bytes('F', "utf-8")  # The victim type being sent is the letter 'F' for flammable  
-
-        position = gps.getValues()  # Get the current gps position of the robot
-        x = int(position[0] * 100)  # Get the xy coordinates, multiplying by 100 to convert from meters to cm
-        y = int(position[2] * 100)  # We will use these coordinates as an estimate for the victim's position
-
-        scanned_signs.append((x, y))
-
-        message = struct.pack("i i c", x, y, victimType)  # Pack the message.
-
-        emitter.send(message)  # Send out the message
-
-        stop(3000)
-
-        print("------------------------------Victim detected at: ", x, y)
-        return
+    print("-----------------detecting sign-------------------------------")
     
-    # TODO: detect any other sign
+    # lower_red = [170, 150, 150]
+    # upper_red = [180, 255, 255]
+    # hsv = cv.cvtColor(img, cv.COLOR_BGR2HSV)
+
+    # red_mask = cv.inRange(hsv, np.array(lower_red), np.array(upper_red))
+
+    # red_count = cv.countNonZero(red_mask)
+
+    # # detect if there is red for F and O hazards
+    # if red_count > RED_THRESHOLD:
+    #     stop(3000)
+
+    #     # TODO: check if the red sign is F (flammable) or O (organic) [depending on the 'orange-ness' of the lower half]
+    #     report('F')
+    #     # report('O')
+    #     return
     
-    #       differentiate between hazards and victims
-    #       send the type of hazard or victim to the emitter
+    # # TODO: detect any other sign
+    
+    # #       differentiate between hazards and victims
+    # #       send the type of hazard or victim to the emitter
 
-    lower_yellow = [20, 100, 100]
-    upper_yellow = [30, 255, 255]
+    # lower_yellow = [20, 100, 100]
+    # upper_yellow = [30, 255, 255]
+    
+    # TODO: DETECTION
+    
+    sign_type = detect_F_O(img)
+    if sign_type == 'N':
+        sign_type = detect_victims(img, camera_right) # TODO: fix this function
+        
+    if sign_type == 'N':
+        sign_type = detect_P_C(img) # TODO: make this function
 
+    
+    # need to stop the robot for some time to detect the sign
+    stop(2500)
+    return
 
 def detect_victims(image_data, camera):
     coords_list = []
@@ -381,6 +410,66 @@ def detect_victims(image_data, camera):
             if should_scan(): # Check if the robot has scanned the sign before
                 detect(cropped_image)
 
+# NOTE: returns N (Not F or O), F (Flammable), or O (Organic)
+def detect_F_O(sign_colored) -> str:
+    
+    sign_colored = cv.cvtColor(sign_colored, cv.COLOR_BGR2RGB)
+    sign_type = 'N' # N means it wasn't F or O
+    h, w, _ = sign_colored.shape
+    half = h // 2
+    bottom = sign_colored[half:, :]
+
+    # mask orange color
+    lower_orange = np.array([192, 142, 0])
+    upper_orange = np.array([204, 190, 20])
+
+    orange_mask = cv.inRange(bottom, lower_orange, upper_orange)
+    # cv2.imshow("orange mask" , orange_mask)
+
+    # check if the orange color exists in the img
+    pixels = cv.countNonZero(orange_mask)
+    if pixels > 10:
+        sign_type = 'O'
+
+    # mask red color
+    lower_red = np.array([185, 0, 0])
+    upper_red = np.array([205, 100, 118])
+
+    red_mask = cv.inRange(bottom, lower_red, upper_red)
+
+    # check if the red color exists in the img
+    pixels = cv.countNonZero(red_mask)
+
+    if pixels > 25:
+        sign_type = 'F'
+
+    return sign_type
+
+# NOTE: returns P (Person), or C (Cat)
+def detect_P_C(sign) -> str:
+    # make the background in gray
+    sign_type = 'N'
+    h, w = sign.shape
+    # get bottom half of the image
+    bottom = sign[int(h * 0.5):, int(w * 0.3):int(w * 0.85)]
+    white_pixel = cv.countNonZero(bottom)
+    black_pixel = bottom.size - white_pixel
+
+    if black_pixel > white_pixel:
+        sign_type = 'C'
+    else:
+        sign_type = 'P'
+        
+    return sign_type
+
+# NOTE: returns N (Not H, S, U), H, S, or U
+def detect_letters(sign) -> str:
+    return 'N' # TODO: implement this function
+
+# endregion
+
+# region main
+
 def navigate():
     global counter
 
@@ -401,7 +490,7 @@ while robot.step(timeStep) != -1:
     print_info()
     
     coords_right = detect_victims(camera_right.getImage(), camera_right)
-    coords_left = detect_victims(camera_left.getImage(), camera_left)
+    coords_left  = detect_victims(camera_left.getImage(),   camera_left)
 
     if not lidar_right:
         turn_90()
@@ -416,3 +505,5 @@ while robot.step(timeStep) != -1:
             turn_90()
 
 navigate()
+
+# endregion
