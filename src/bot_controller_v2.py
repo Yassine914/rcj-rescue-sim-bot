@@ -10,7 +10,7 @@ RED_THRESHOLD = 30  # The threshold for the red color in the image
 TILE_WIDTH = 12 # the width of the tile in cm
 BLACK_THRESHOLD = 60 # The threshold for the black color in the image (holes)
 
-timeStep = 32
+timestep = 32
 max_velocity = 6.28
 robot = Robot()
 
@@ -32,12 +32,12 @@ lidar = robot.getDevice("lidar")
 emitter = robot.getDevice("emitter")
 
 # enable the sensors
-gps.enable(timeStep)
-compass.enable(timeStep)
-camera_right.enable(timeStep)
-camera_left.enable(timeStep)
-color_sensor.enable(timeStep)
-lidar.enable(timeStep)
+gps.enable(timestep)
+compass.enable(timestep)
+camera_right.enable(timestep)
+camera_left.enable(timestep)
+color_sensor.enable(timestep)
+lidar.enable(timestep)
 
 gps_readings = [0, 0, 0]
 compass_value = 0
@@ -186,7 +186,7 @@ def turn_90(right = True):
         s2 = -3
 
     # start moving the robot
-    while robot.step(timeStep) != -1:
+    while robot.step(timestep) != -1:
         # whenever the robot is moving, we should get the sensor values to update the global variables
         get_all_sesnor_values()
         detect_victims(img_right, camera_right)
@@ -206,11 +206,11 @@ def stop(duration):
     # the simulation will keep running but the robot will stop
 
     stop = duration
-    while robot.step(timeStep) != -1:
+    while robot.step(timestep) != -1:
         # keep looping until 5000ms pass then break the loop
         wheel1.setVelocity(0)
         wheel2.setVelocity(0)
-        stop -= timeStep
+        stop -= timestep
         if stop <= 0:
             break
 
@@ -257,7 +257,7 @@ def move_one_tile():
             x_new = x
             y_new = y + TILE_WIDTH
             
-    while robot.step(timeStep) != -1:
+    while robot.step(timestep) != -1:
 
         # whenever the robot is moving, we should get the sensor values to update the global variables
         get_all_sesnor_values()
@@ -331,21 +331,23 @@ def should_scan():
     return True
 
 def report(type: str):
-    global scanned_signs, pos
+    global scanned_signs, pos, gps, scanned_signs
+    print("-----------------reporting sign-------------------------------")
     
     pos = gps.getValues()
-    x = int(pos[0] * 100)
-    z = int(pos[2] * 100)
-    scanned_signs.append((x, z))
+    pos_x = int(pos[0] * 100)
+    pos_z = int(pos[2] * 100)
+    scanned_signs.append((pos_x, pos_z))
     
     sign_type = bytes(type, "utf-8")
-    message = struct.pack("i i c", x, z, sign_type)  # Pack the message.
-    emitter.send(message)
-    print("____________ SENDING MESSAGE: ", sign_type.decode())
+    msg = struct.pack("i i c", pos_x, pos_z, sign_type)  # Pack the message.
     
-    robot.step(timeStep)  # Wait for the message to be sent.
+    emitter.send(msg)
+    robot.step(timestep)  # Wait for the message to be sent.
+    emitter.send(msg)
+    robot.step(timestep);
     
-    print("------------------------------Victim detected at: ", x, z, "of type: ", type)
+    print("------------------------------Victim detected at: ", pos_x, pos_z, "of type: ", type)
     
 
 def detect(img):
@@ -357,8 +359,8 @@ def detect(img):
     # if no red then it might be a letter
     if sign_type == 'N':
         # FIXME: letter detection gives a lot of errors rn
-        sign_type = detect_letters_old(img)
-        # sign_type, bottom = detect_letters(img)
+        # sign_type = detect_letters_old(img)
+        sign_type, bottom = detect_letters(img)
         
     # if it's not a letter then it must be P or C
     if sign_type == 'N':
@@ -493,6 +495,7 @@ def detect_letters_old(sign) -> str:
 def detect_letters(sign) -> str:
     # FIXME: I think letter is not correct somehow (it should have a height and a width)
     # invert the image
+    sign = cv.cvtColor(sign, cv.COLOR_BGR2GRAY)
     letter = cv.bitwise_not(sign)
 
     # filling the background of the img with black
@@ -569,7 +572,7 @@ def print_info():
     print(f"Color sensor values:  {color_sensor_values}")
     print("---------------------------------")
 
-while robot.step(timeStep) != -1:
+while robot.step(timestep) != -1:
 
     # whenever the robot is moving, we should get the sensor values to update the global variables
     get_all_sesnor_values()
