@@ -330,16 +330,20 @@ def should_scan():
             return False
     return True
 
-def report(type):
-    victimType = bytes(type, "utf-8")
+def report(type: str):
+    global scanned_signs, pos
     
     pos = gps.getValues()
     x = int(pos[0] * 100)
     z = int(pos[2] * 100)
     scanned_signs.append((x, z))
     
-    message = struct.pack("i i c", x, z, victimType)  # Pack the message.
+    sign_type = bytes(type, "utf-8")
+    message = struct.pack("i i c", x, z, sign_type)  # Pack the message.
     emitter.send(message)
+    print("____________ SENDING MESSAGE: ", sign_type.decode())
+    
+    robot.step(timeStep)  # Wait for the message to be sent.
     
     print("------------------------------Victim detected at: ", x, z, "of type: ", type)
     
@@ -353,7 +357,8 @@ def detect(img):
     # if no red then it might be a letter
     if sign_type == 'N':
         # FIXME: letter detection gives a lot of errors rn
-        sign_type, bottom = detect_letters_old(img)
+        sign_type = detect_letters_old(img)
+        # sign_type, bottom = detect_letters(img)
         
     # if it's not a letter then it must be P or C
     if sign_type == 'N':
@@ -429,6 +434,7 @@ def detect_F_O(sign_colored) -> str:
 # NOTE: returns P (Person), or C (Cat)
 def detect_P_C(sign) -> str:
     # make the background in gray
+    sign = cv.cvtColor(sign, cv.COLOR_BGR2GRAY)
     sign_type = 'N'
     h, w = sign.shape
     # get bottom half of the image
@@ -444,7 +450,7 @@ def detect_P_C(sign) -> str:
     return sign_type
 
 def detect_letters_old(sign) -> str:
-    img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    img = cv.cvtColor(sign, cv.COLOR_BGR2GRAY)
     _, thresh = cv.threshold(img, 80, 255, cv.THRESH_BINARY_INV)
     
     height, width = thresh.shape
@@ -470,18 +476,18 @@ def detect_letters_old(sign) -> str:
     
     if num_contours_first == 1 and num_contours_third == 1:
         print("found H")
-        report('H')
+        # report('H')
         return 'H'
     elif num_contours_first == 2 and num_contours_third == 2:
         print("found S")
-        report('S')
+        # report('S')
         return 'S'
     elif num_contours_first == 3 and num_contours_third == 3:
         print("found U")
-        report('U')
+        # report('U')
         return 'U'
     else:
-        return None
+        return 'N' # return N for not found
 
 # NOTE: returns N (Not H, S, U), H, S, or U
 def detect_letters(sign) -> str:
