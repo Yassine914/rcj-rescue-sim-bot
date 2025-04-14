@@ -507,17 +507,14 @@ def detect_letters_old(sign) -> str:
     print("Third Section Contours: ", num_contours_third)
     
     if num_contours_first == 1 and num_contours_third == 1:
-        print("found H")
-        # report('H')
-        return 'H'
-    elif num_contours_first == 2 and num_contours_third == 2:
-        print("found S")
-        # report('S')
-        return 'S'
-    elif num_contours_first == 3 and num_contours_third == 3:
-        print("found U")
-        # report('U')
+        # print("found H")
         return 'U'
+    elif num_contours_first == 2 and num_contours_third == 2:
+        # print("found S")
+        return 'H'
+    elif num_contours_first == 3 and num_contours_third == 3:
+        return 'S'
+        # print("found U")
     else:
         return 'N' # return N for not found
 
@@ -596,6 +593,7 @@ def navigate():
     global counter
 
 def print_info():
+    return
     print("---------------------------------")
     print(f"Compass value:  {compass_value}")
     print(f"gps readings:  {gps_readings}")
@@ -609,7 +607,7 @@ while robot.step(timestep) != -1:
     detect_victims(img_right, camera_right)
     detect_victims(img_left, camera_left)
     
-    print_info()
+    # print_info()
     
     coords_right = detect_victims(camera_right.getImage(), camera_right)
     coords_left  = detect_victims(camera_left.getImage(),   camera_left)
