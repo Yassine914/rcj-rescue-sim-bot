@@ -3,6 +3,7 @@ import math
 import numpy as np
 import cv2 as cv
 import struct
+import random
 
 # region globals
 
@@ -344,8 +345,6 @@ def report(type):
     
     emitter.send(msg)
     robot.step(timestep)  # Wait for the message to be sent.
-    emitter.send(msg)
-    robot.step(timestep);
     
     print("------------------------------Victim detected at: ", pos_x, pos_z, "of type: ", type)
     
@@ -363,24 +362,26 @@ def detect(img):
     #     if sign_type == 'N':
     #         sign_type = detect_P_C(img)
     
+    stop(2500)
+    
     sign_type = detect_F_O(img)
     
     # if no red then it might be a letter
     if sign_type == 'N':
-        # FIXME: letter detection gives a lot of errors rn
         sign_type = detect_letters_old(img)
         # sign_type, bottom = detect_letters(img)
         
     # if it's not a letter then it must be P or C
     if sign_type == 'N':
         sign_type = detect_P_C(img)
+        
+    # FIXME: report broken rn
     if sign_type != 'N':
         report(sign_type);
     
     print("-------------------------------------sign type: ", sign_type)
 
     # need to stop the robot for some time to detect the sign
-    stop(2500)
     return
 
 def detect_victims(image_data, camera):
@@ -599,6 +600,8 @@ def print_info():
     print(f"gps readings:  {gps_readings}")
     print(f"Color sensor values:  {color_sensor_values}")
     print("---------------------------------")
+    
+grid = [300, 300] * -1
 
 while robot.step(timestep) != -1:
 
@@ -617,8 +620,11 @@ while robot.step(timestep) != -1:
         r = move_one_tile()
         if r == "hole":
             turn_90()
+            # r = random.randint(0, 1)
+            # turn_90(right=False) if r else turn_90(right=True)
     elif lidar_front:
-        turn_90(right=False)
+        r = random.randint(0, 1)
+        turn_90(right=False) if r else turn_90(right=True)
     else:
         r = move_one_tile()
         if r == "hole":
