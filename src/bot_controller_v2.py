@@ -330,7 +330,7 @@ def should_scan():
             return False
     return True
 
-def report(type: str):
+def report(type):
     global scanned_signs, pos, gps, scanned_signs
     print("-----------------reporting sign-------------------------------")
     
@@ -354,19 +354,28 @@ def detect(img):
     print("-----------------detecting sign-------------------------------")
     
     # check it has any red
+    
+    # shape = detect_shape(img)
+    # if shape == 'S':
+    #     sign_type = detect_letters(img)
+    # else:
+    #     sign_type = detect_F_O(img)
+    #     if sign_type == 'N':
+    #         sign_type = detect_P_C(img)
+    
     sign_type = detect_F_O(img)
     
     # if no red then it might be a letter
     if sign_type == 'N':
         # FIXME: letter detection gives a lot of errors rn
-        # sign_type = detect_letters_old(img)
-        sign_type, bottom = detect_letters(img)
+        sign_type = detect_letters_old(img)
+        # sign_type, bottom = detect_letters(img)
         
     # if it's not a letter then it must be P or C
     if sign_type == 'N':
         sign_type = detect_P_C(img)
-        
-    report(sign_type);
+    if sign_type != 'N':
+        report(sign_type);
     
     print("-------------------------------------sign type: ", sign_type)
 
@@ -397,6 +406,27 @@ def detect_victims(image_data, camera):
             cropped_image = img[y:y + h, x:x + w]
             if should_scan(): # Check if the robot has scanned the sign before
                 detect(cropped_image)
+
+
+# NOTE: returns S (Square), R (Rhombus), or N (Not S or R)
+def detect_shape(sign_colored) -> str:
+    # determine wether the sign is a square or rhombus
+    
+    sign_colored = cv.cvtColor(sign_colored, cv.COLOR_BGR2GRAY)
+    _, thresh = cv.threshold(sign_colored, 80, 255, cv.THRESH_BINARY_INV)
+    contours, _ = cv.findContours(thresh, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    
+    # iterate over the contours and check if any of them is a square or rhombus
+    for contour in contours:
+        # get the bounding rectangle of the contour
+        x, y, w, h = cv.boundingRect(contour)
+        # check if the contour is a square or rhombus
+        if abs(w - h) < 10 and 0.5 < w / h < 2:
+            return 'S'
+        elif abs(w - h) < 10 and 2 < w / h < 3:
+            return 'R'
+        
+    return 'N'  # return N if no square or rhombus is found
 
 # NOTE: returns N (Not F or O), F (Flammable), or O (Organic)
 def detect_F_O(sign_colored) -> str:
@@ -433,7 +463,7 @@ def detect_F_O(sign_colored) -> str:
 
     return sign_type
 
-# NOTE: returns P (Person), or C (Cat)
+# NOTE: returns P (Poison), or C (Corrosive)
 def detect_P_C(sign) -> str:
     # make the background in gray
     sign = cv.cvtColor(sign, cv.COLOR_BGR2GRAY)
