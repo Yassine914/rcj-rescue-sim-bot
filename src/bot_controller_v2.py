@@ -481,10 +481,10 @@ def detect_P_C(sign) -> str:
     white_pixel = cv.countNonZero(bottom)
     black_pixel = bottom.size - white_pixel
 
-    if black_pixel > white_pixel:
-        sign_type = 'C'
-    else:
+    if black_pixel <= white_pixel:
         sign_type = 'P'
+    else:
+        sign_type = 'C'
         
     return sign_type
 
@@ -725,13 +725,29 @@ def get_next_coords(x, y, direction):
     else:  # South (180 or -180)
         return x, y + TILE_WIDTH
 
+
+old_x, old_y = None, None
 # Zeyad was here
 def move2():
+    global old_x, old_y, coords
+    
     cx, cy = current_coords()
     # print(f"___________ CURRENT: ({cx}, {cy})")
     
     # Check if current tile has been visited
     current_visited = passed()
+    
+    if old_x is not None and old_y is not None:
+        # Check if the robot has moved to a new tile
+        if (cx, cy) != (old_x, old_y):
+            # Save the previous coordinates as visited
+            save_coords(old_x, old_y)
+            print(f"Saving new tile: ({old_x}, {old_y})")
+        else:
+            # If the robot hasn't moved, return early
+            turn_90()
+            move_one_tile()
+            return
     
     # Save the current coordinates as visited if not already visited
     if not current_visited:
@@ -806,6 +822,8 @@ def move2():
             result = move_one_tile()
             turn_90()
             turn_90()
+            
+        old_x, old_y = cx, cy
         
         # If successful move or max attempts reached, exit the loop
         if result != "hole":
