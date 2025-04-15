@@ -734,7 +734,7 @@ def move2():
             best_direction = unvisited_directions[0]
             print(f"Moving to unvisited direction: {best_direction}")
         elif directions:
-            best_direction = directions[0][0]
+            best_direction = directions[0][0];
             print(f"All directions visited, using priority direction: {best_direction}")
         else:
             # This shouldn't happen due to the earlier check, but just in case
@@ -755,6 +755,8 @@ def move2():
             turn_90()
             turn_90()
             result = move_one_tile()
+            turn_90()
+            turn_90()
         
         # If successful move or max attempts reached, exit the loop
         if result != "hole":
