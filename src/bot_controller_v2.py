@@ -666,6 +666,7 @@ def get_next_coords(x, y, direction):
     else:  # South (180 or -180)
         return x, y + TILE_WIDTH
 
+# Zeyad was here
 def move2():
     cx, cy = current_coords()
     print(f"___________ CURRENT: ({cx}, {cy})")
