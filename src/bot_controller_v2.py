@@ -716,6 +716,7 @@ def move2():
             print("All directions blocked by walls, turning around")
             turn_90()
             turn_90()
+            move_one_tile()
             return
         
         # Mark which directions lead to visited tiles
@@ -818,7 +819,7 @@ while robot.step(timestep) != -1:
     detect_victims(img_right, camera_right)
     detect_victims(img_left, camera_left)
     
-    # print_info()
+    print_info()
     
     coords_right = detect_victims(camera_right.getImage(), camera_right)
     coords_left  = detect_victims(camera_left.getImage(),   camera_left)
