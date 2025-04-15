@@ -375,7 +375,7 @@ def detect(img):
     # if no red then it might be a letter
     # FIXME:
     if sign_type == 'N':
-        sign_type = detect_letters_old(img)
+        sign_type = detect_letters2(img)
         # sign_type, bottom = detect_letters(img)
         
     # if it's not a letter then it must be P or C
@@ -487,6 +487,55 @@ def detect_P_C(sign) -> str:
         sign_type = 'P'
         
     return sign_type
+
+def detect_letters2(sign) -> str:
+    img = cv.cvtColor(sign, cv.COLOR_BGR2GRAY)
+    _, thresh = cv.threshold(img, 80, 255, cv.THRESH_BINARY_INV)
+    
+    height, width = thresh.shape
+    section_width = width // 3
+    
+    first_section = thresh[:, :section_width]
+    middle_section = thresh[:, section_width:2 * section_width]
+    third_section = thresh[:, 2 * section_width:]
+    
+    contours_first, _ = cv.findContours(first_section, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    contours_middle, _ = cv.findContours(middle_section, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    contours_third, _ = cv.findContours(third_section, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    
+    # Output images for debugging
+    cv.imshow("First Section", first_section)
+    cv.imshow("Middle Section", middle_section)
+    cv.imshow("Third Section", third_section)
+    cv.waitKey(1)
+    
+    num_contours_first = len(contours_first)
+    num_contours_middle = len(contours_middle)
+    num_contours_third = len(contours_third)
+    
+    print("First Section Contours: ", num_contours_first)
+    print("Middle Section Contours: ", num_contours_middle)
+    print("Third Section Contours: ", num_contours_third)
+    
+    # H has vertical lines on both sides (1 contour each) and a horizontal line in the middle
+    if num_contours_first == 1 and num_contours_middle == 1 and num_contours_third == 1:
+        return 'H'
+    
+    # S has a distinctive pattern with typically 2 contours in each section
+    elif num_contours_first >= 2 and num_contours_middle >= 1 and num_contours_third >= 2:
+        return 'S'
+    
+    # U has vertical lines on both sides (1 contour each) with a curve at the bottom
+    elif num_contours_first == 1 and num_contours_third == 1:
+        # Additional check for the bottom curve
+        bottom_third = height * 2 // 3
+        bottom_middle = middle_section[bottom_third:, :]
+        bottom_pixels = cv.countNonZero(bottom_middle)
+        if bottom_pixels > 10:  # There should be pixels in the bottom middle for U
+            return 'U'
+    
+    # If no pattern matches
+    return 'N'
 
 def detect_letters_old(sign) -> str:
     img = cv.cvtColor(sign, cv.COLOR_BGR2GRAY)
