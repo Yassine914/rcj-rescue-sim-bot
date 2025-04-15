@@ -54,6 +54,8 @@ scanned_signs = []
 img_right = None
 img_left = None
 
+curr_area = 1
+
 # endregion
 
 # region sensor_data
@@ -371,6 +373,7 @@ def detect(img):
     sign_type = detect_F_O(img)
     
     # if no red then it might be a letter
+    # FIXME:
     if sign_type == 'N':
         sign_type = detect_letters_old(img)
         # sign_type, bottom = detect_letters(img)
@@ -493,10 +496,11 @@ def detect_letters_old(sign) -> str:
     section_width = width // 3
     
     first_section = thresh[:, :section_width]
-    # ignore the middle section
+    middle_section = thresh[:, section_width:2 * section_width]
     third_section = thresh[:, 2 * section_width:]
     
     contours_first, _ = cv.findContours(first_section, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    contours_middle, _ = cv.findContours(middle_section, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
     contours_third, _ = cv.findContours(third_section, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
     
     # output image for debugging
@@ -505,18 +509,20 @@ def detect_letters_old(sign) -> str:
     cv.waitKey(1)
     
     num_contours_first = len(contours_first)
+    num_contours_middle = len(contours_middle)
     num_contours_third = len(contours_third)
     
     print("First Section Contours: ", num_contours_first)
+    print("Middle Section Contours: ", num_contours_middle)
     print("Third Section Contours: ", num_contours_third)
     
-    if num_contours_first == 1 and num_contours_third == 1:
+    if num_contours_first == 1 and num_contours_middle == 1 and num_contours_third == 2:
         # print("found H")
         return 'U'
-    elif num_contours_first == 2 and num_contours_third == 2:
+    elif num_contours_first == 1 and num_contours_middle == 1 and num_contours_third == 1:
         # print("found S")
         return 'H'
-    elif num_contours_first == 3 and num_contours_third == 3:
+    elif num_contours_first == 3 and num_contours_middle == 4 and num_contours_third == 2:
         return 'S'
         # print("found U")
     else:
@@ -577,6 +583,10 @@ def detect_letters(sign) -> str:
     cnts = cv.findContours(bottom, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
     cnts = cnts[0] if len(cnts) == 2 else cnts[1]
     c3 = (len(cnts))
+    
+    # print contours
+    print("________________________________________________________________")
+    print("Top: ", c1, "Middle: ", c2, "Bottom: ", c3)
 
     # check whether a letter is detected and change the bool value if yes
     # print ("LETTER CODE: ", c1,c2,c3)
@@ -669,7 +679,7 @@ def get_next_coords(x, y, direction):
 # Zeyad was here
 def move2():
     cx, cy = current_coords()
-    print(f"___________ CURRENT: ({cx}, {cy})")
+    # print(f"___________ CURRENT: ({cx}, {cy})")
     
     # Check if current tile has been visited
     current_visited = passed()
@@ -698,8 +708,8 @@ def move2():
             directions.append(("front", False))
         if not lidar_left:
             directions.append(("left", False))
-        if not lidar_back:
-            directions.append(("back", False))
+        # if not lidar_back:
+            # directions.append(("back", False))
         
         # If no directions available (surrounded by walls), force a turn
         if not directions:
@@ -764,11 +774,14 @@ def move2():
     if random.choice([True, False]):
         turn_90()
     else:
-        turn_90(right=False)   
+        turn_90(right=False)
 
+def detect_current_area():
+    global curr_area
+    get_colour_sensor_value()
 
 def move():
-    print("___________ CURRENT: ", *current_coords());
+    # print("___________ CURRENT: ", *current_coords());
     if passed():
         if not lidar_left:
             turn_90(right=False)
