@@ -384,8 +384,7 @@ def detect(img):
         
     if sign_type != 'N':
         report(sign_type);
-    
-    print("-------------------------------------sign type: ", sign_type)
+        print("-------------------------------------sign type: ", sign_type)
 
     # need to stop the robot for some time to detect the sign
     return
