@@ -367,15 +367,15 @@ def detect(img):
     #     sign_type = detect_F_O(img)
     #     if sign_type == 'N':
     #         sign_type = detect_P_C(img)
-    
     stop(2500)
     
     sign_type = detect_F_O(img)
     
     # if no red then it might be a letter
+    print("_____________ SHAPE: ___________________ :", detect_shape(img));
     # FIXME:
     if sign_type == 'N':
-        sign_type = detect_letters2(img)
+        sign_type = detect_letters_old(img)
         # sign_type, bottom = detect_letters(img)
         
     # if it's not a letter then it must be P or C
@@ -416,24 +416,62 @@ def detect_victims(image_data, camera):
 
 # NOTE: returns S (Square), R (Rhombus), or N (Not S or R)
 def detect_shape(sign_colored) -> str:
-    # determine wether the sign is a square or rhombus
+
+    # Convert to grayscale and apply thresholding
+    if sign_colored is None:
+        return 'N'
+        
+    gray = cv.cvtColor(sign_colored, cv.COLOR_BGR2GRAY)
+    _, thresh = cv.threshold(gray, 80, 255, cv.THRESH_BINARY_INV)
     
-    sign_colored = cv.cvtColor(sign_colored, cv.COLOR_BGR2GRAY)
-    _, thresh = cv.threshold(sign_colored, 80, 255, cv.THRESH_BINARY_INV)
+    # Find contours
     contours, _ = cv.findContours(thresh, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
     
-    # iterate over the contours and check if any of them is a square or rhombus
     for contour in contours:
-        # get the bounding rectangle of the contour
-        x, y, w, h = cv.boundingRect(contour)
-        # check if the contour is a square or rhombus
-        if abs(w - h) < 10 and 0.5 < w / h < 2:
-            return 'S'
-        elif abs(w - h) < 10 and 2 < w / h < 3:
-            return 'R'
+        # Approximate the contour to a polygon
+        perimeter = cv.arcLength(contour, True)
+        epsilon = 0.04 * perimeter  # Precision parameter
+        approx = cv.approxPolyDP(contour, epsilon, True)
         
-    return 'N'  # return N if no square or rhombus is found
-
+        # Check if the polygon has 4 vertices (both square and rhombus have 4 vertices)
+        if len(approx) == 4:
+            # Calculate the angles between the vertices
+            angles = []
+            for i in range(4):
+                p1 = approx[i][0]
+                p2 = approx[(i + 1) % 4][0]
+                p3 = approx[(i + 2) % 4][0]
+                
+                # Calculate vectors
+                v1 = np.array([p2[0] - p1[0], p2[1] - p1[1]])
+                v2 = np.array([p3[0] - p2[0], p3[1] - p2[1]])
+                
+                # Calculate angle using dot product
+                dot = np.dot(v1, v2)
+                mag1 = np.linalg.norm(v1)
+                mag2 = np.linalg.norm(v2)
+                
+                # Avoid division by zero
+                if mag1 * mag2 == 0:
+                    continue
+                    
+                cos_angle = dot / (mag1 * mag2)
+                # Clamp to avoid numerical errors
+                cos_angle = max(-1, min(1, cos_angle))
+                angle = np.degrees(np.arccos(cos_angle))
+                angles.append(angle)
+            
+            # Check if it's a square (all angles close to 90 degrees)
+            if all(abs(angle - 90) < 10 for angle in angles):
+                print("Square detected - angles:", angles)
+                return 'S'
+            
+            # Check if it's a rhombus (opposite angles are equal)
+            elif len(angles) == 4 and abs(angles[0] - angles[2]) < 10 and abs(angles[1] - angles[3]) < 10:
+                print("Rhombus detected - angles:", angles)
+                return 'R'
+    
+    return 'N'  # Not a square or rhombus
 # NOTE: returns N (Not F or O), F (Flammable), or O (Organic)
 def detect_F_O(sign_colored) -> str:
     
@@ -448,7 +486,7 @@ def detect_F_O(sign_colored) -> str:
     upper_orange = np.array([204, 190, 20])
 
     orange_mask = cv.inRange(bottom, lower_orange, upper_orange)
-    # cv2.imshow("orange mask" , orange_mask)
+    # cv.imshow("orange mask" , orange_mask)
 
     # check if the orange color exists in the img
     pixels = cv.countNonZero(orange_mask)
@@ -473,19 +511,16 @@ def detect_F_O(sign_colored) -> str:
 def detect_P_C(sign) -> str:
     # make the background in gray
     sign = cv.cvtColor(sign, cv.COLOR_BGR2GRAY)
-    sign_type = 'N'
     h, w = sign.shape
     # get bottom half of the image
     bottom = sign[int(h * 0.5):, int(w * 0.3):int(w * 0.85)]
     white_pixel = cv.countNonZero(bottom)
     black_pixel = bottom.size - white_pixel
 
-    if black_pixel <= white_pixel:
-        sign_type = 'P'
+    if black_pixel > white_pixel:
+        return 'C'
     else:
-        sign_type = 'C'
-        
-    return sign_type
+        return 'P'
 
 def detect_letters2(sign) -> str:
     img = cv.cvtColor(sign, cv.COLOR_BGR2GRAY)
@@ -517,11 +552,11 @@ def detect_letters2(sign) -> str:
     print("Third Section Contours: ", num_contours_third)
     
     # H has vertical lines on both sides (1 contour each) and a horizontal line in the middle
-    if num_contours_first == 1 and num_contours_middle == 1 and num_contours_third == 1:
+    if num_contours_first == 2 and num_contours_middle == 1 and num_contours_third == 2:
         return 'H'
     
     # S has a distinctive pattern with typically 2 contours in each section
-    elif num_contours_first >= 2 and num_contours_middle >= 1 and num_contours_third >= 2:
+    elif num_contours_first == 1 and num_contours_third == 1:
         return 'S'
     
     # U has vertical lines on both sides (1 contour each) with a curve at the bottom
@@ -540,39 +575,38 @@ def detect_letters_old(sign) -> str:
     img = cv.cvtColor(sign, cv.COLOR_BGR2GRAY)
     _, thresh = cv.threshold(img, 80, 255, cv.THRESH_BINARY_INV)
     
+    cv.imwrite("sign.png", img)
+    
     height, width = thresh.shape
     section_width = width // 3
-    
+
     first_section = thresh[:, :section_width]
     middle_section = thresh[:, section_width:2 * section_width]
     third_section = thresh[:, 2 * section_width:]
-    
+
     contours_first, _ = cv.findContours(first_section, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
     contours_middle, _ = cv.findContours(middle_section, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
     contours_third, _ = cv.findContours(third_section, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-    
+
     # output image for debugging
     cv.imshow("First Section", first_section)
     cv.imshow("Third Section", third_section)
     cv.waitKey(1)
-    
+
     num_contours_first = len(contours_first)
     num_contours_middle = len(contours_middle)
     num_contours_third = len(contours_third)
-    
+
     print("First Section Contours: ", num_contours_first)
     print("Middle Section Contours: ", num_contours_middle)
     print("Third Section Contours: ", num_contours_third)
     
-    if num_contours_first == 1 and num_contours_middle == 1 and num_contours_third == 2:
-        # print("found H")
+    if num_contours_first == 3 and num_contours_third == 3:
         return 'U'
-    elif num_contours_first == 1 and num_contours_middle == 1 and num_contours_third == 1:
-        # print("found S")
+    elif num_contours_first == 1 and num_contours_third == 1:
         return 'H'
-    elif num_contours_first == 3 and num_contours_middle == 4 and num_contours_third == 2:
+    elif num_contours_first == 4 and num_contours_third == 4:
         return 'S'
-        # print("found U")
     else:
         return 'N' # return N for not found
 
@@ -646,6 +680,86 @@ def detect_letters(sign) -> str:
         letter_type = 'U'
 
     return letter_type, bottom
+
+
+def detect_letters3(sign) -> str:
+    sign = cv.cvtColor(sign, cv.COLOR_BGR2GRAY)
+    # inverse the img to color the letter(if the img is human) in white to be able to find contours in it
+    letter = cv.bitwise_not(sign)
+    # cv.imshow("letter" , letter)
+    # save letter
+    
+    cv.imwrite("sign.png", sign)
+    cv.imwrite("letter.png", letter)
+
+    # filling the background of the img with black
+    h, w = letter.shape
+    for x in range(0, h):
+        for y in range(0, w):
+            pixel = letter[x, y]
+
+            if pixel < 20:
+                break
+            else:
+                letter[x, y] = (0)
+
+        for y_inversed in range(w - 1, 0, -1):
+            pixel = letter[x, y_inversed]
+            if pixel < 20:
+                break
+            else:
+                letter[x, y_inversed] = (0)
+
+    # find contours in the letter img
+    cnts = cv.findContours(letter, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    cnts = cnts[0] if len(cnts) == 2 else cnts[1]
+
+    for i, c in enumerate(cnts):
+        cv.imwrite("contour_{i}.png", c)
+        (x, y, w, h) = cv.boundingRect(c)
+        # crop the img to the letter itself
+        letter = letter[y:y + h, x:x + w]
+
+    # letter detection
+    h, w = letter.shape
+    letter_type = "N"
+
+    third = h // 3
+    top = letter[:third, :]
+    middle = letter[third:third * 2, :]
+    bottom = letter[third * 2:, :]
+
+    # finding contours in the three part of the image to be able to recognize the letter
+    cnts = cv.findContours(top, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    cnts = cnts[0] if len(cnts) == 2 else cnts[1]
+    c1 = (len(cnts))
+
+    cnts = cv.findContours(middle, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    cnts = cnts[0] if len(cnts) == 2 else cnts[1]
+    c2 = (len(cnts))
+
+    cnts = cv.findContours(bottom, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    cnts = cnts[0] if len(cnts) == 2 else cnts[1]
+    c3 = (len(cnts))
+    
+    print("First Section Contours: ",  c1)
+    print("Middle Section Contours: ", c2)
+    print("Third Section Contours: ",  c3)
+
+    # check whether a letter is detected and change the bool value if yes
+    # print ("LETTER CODE: ", c1,c2,c3)
+    if c1 == 1 and c3 == 1:
+        # print("S victim")
+        letter_type = "S"
+    elif c1 == 2 and c2 == 1 and c3 == 2:
+        # print("H victim")
+        letter_type = "H"
+
+    elif c1 == 2 and c2 == 2 and c3 == 1:
+        # print("U victim")
+        letter_type = "U"
+
+    return letter_type
 
 # endregion
 
@@ -778,8 +892,8 @@ def move2():
         # If no directions available (surrounded by walls), force a turn
         if not directions:
             print("All directions blocked by walls, turning around")
-            turn_90()
-            turn_90()
+            turn_90(right=False)
+            # turn_90()
             move_one_tile()
             return
         
