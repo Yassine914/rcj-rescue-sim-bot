@@ -218,6 +218,8 @@ def stop(duration):
 start = robot.getTime()
 
 def move_one_tile():
+    global coords
+    
 
     # in this function, first we get the current x and y of the robot
     # then we round x and y to the nearest multiple of 12 (because the tiles are 12x12)
@@ -235,6 +237,8 @@ def move_one_tile():
     x = round(x / TILE_WIDTH) * TILE_WIDTH
     y = round(y / TILE_WIDTH) * TILE_WIDTH
 
+    # save_coords(x, y);
+    
     # if the robot is facing horizontally (90 or -90) we should move in the x direction, so x should change and y should stay the same
     # if the robot is facing vertically (0 or 180) we should move in the y direction, so y should change and x should stay the same
 
@@ -375,7 +379,6 @@ def detect(img):
     if sign_type == 'N':
         sign_type = detect_P_C(img)
         
-    # FIXME: report broken rn
     if sign_type != 'N':
         report(sign_type);
     
@@ -600,8 +603,199 @@ def print_info():
     print(f"gps readings:  {gps_readings}")
     print(f"Color sensor values:  {color_sensor_values}")
     print("---------------------------------")
+
+
+coords = set()
+
+def current_coords():
+    # return the current coordinates of the robot
+    x = gps_readings[0]
+    y = gps_readings[2]
+    return round(x), round(y)
+
+def save_coords(x, y):
+    global coords
+    coords.add((x, y))
     
-grid = [300, 300] * -1
+def passed():
+    cx, cy = current_coords()
+    for (i, j) in coords:
+        if math.sqrt(
+            math.pow(cx - i, 2) +
+            math.pow(cy - j, 2)
+        ) < TILE_WIDTH / 2:
+            print("___________________________ COORDS: ", i, j, " PASSED");
+            return True
+        
+    return False
+
+def get_next_coords(x, y, direction):
+    """
+    Calculate the next coordinates based on current position and direction.
+    """
+    # Get the compass value rounded to the nearest 90 degrees
+    compass_value_rounded = round(compass_value / 90) * 90
+    
+    # Adjust direction based on current orientation
+    if direction == "front":
+        # Keep same direction
+        new_dir = compass_value_rounded
+    elif direction == "right":
+        # Turn 90 degrees right
+        new_dir = compass_value_rounded - 90
+    elif direction == "left":
+        # Turn 90 degrees left
+        new_dir = compass_value_rounded + 90
+    else:
+        # Turn around (180 degrees)
+        new_dir = compass_value_rounded + 180
+    
+    # Normalize angle to -180 to 180 range
+    if new_dir > 180:
+        new_dir -= 360
+    elif new_dir < -180:
+        new_dir += 360
+    
+    # Calculate next coordinates based on new direction
+    if new_dir == 0:  # North
+        return x, y - TILE_WIDTH
+    elif new_dir == 90:  # East
+        return x - TILE_WIDTH, y
+    elif new_dir == -90:  # West
+        return x + TILE_WIDTH, y
+    else:  # South (180 or -180)
+        return x, y + TILE_WIDTH
+
+def move2():
+    cx, cy = current_coords()
+    print(f"___________ CURRENT: ({cx}, {cy})")
+    
+    # Check if current tile has been visited
+    current_visited = passed()
+    
+    # Save the current coordinates as visited if not already visited
+    if not current_visited:
+        save_coords(cx, cy)
+        print(f"Saving new tile: ({cx}, {cy})")
+    
+    # Track attempt count to prevent infinite loops
+    attempt_count = 0
+    max_attempts = 4  # Maximum number of attempts before forcing a move
+    
+    # Repeat until a successful move or max attempts reached
+    while attempt_count < max_attempts:
+        attempt_count += 1
+        print(f"Movement attempt {attempt_count} of {max_attempts}")
+        
+        # Create a priority list of possible movement directions
+        directions = []
+        
+        # Check which directions are free and add them to the priority list
+        if not lidar_right:
+            directions.append(("right", False))
+        if not lidar_front:
+            directions.append(("front", False))
+        if not lidar_left:
+            directions.append(("left", False))
+        if not lidar_back:
+            directions.append(("back", False))
+        
+        # If no directions available (surrounded by walls), force a turn
+        if not directions:
+            print("All directions blocked by walls, turning around")
+            turn_90()
+            turn_90()
+            return
+        
+        # Mark which directions lead to visited tiles
+        for i, (direction, _) in enumerate(directions):
+            next_x, next_y = get_next_coords(cx, cy, direction)
+            for visited_x, visited_y in coords:
+                if math.sqrt(math.pow(next_x - visited_x, 2) + math.pow(next_y - visited_y, 2)) < TILE_WIDTH / 2:
+                    directions[i] = (direction, True)
+                    break
+        
+        # Find the best direction to move
+        unvisited_directions = [d for d, visited in directions if not visited]
+        
+        if unvisited_directions:
+            best_direction = unvisited_directions[0]
+            print(f"Moving to unvisited direction: {best_direction}")
+        elif directions:
+            best_direction = directions[0][0]
+            print(f"All directions visited, using priority direction: {best_direction}")
+        else:
+            # This shouldn't happen due to the earlier check, but just in case
+            best_direction = "turn_around"
+            print("No valid directions, turning around")
+        
+        # Execute the movement
+        result = None
+        if best_direction == "right":
+            turn_90(right=True)
+            result = move_one_tile()
+        elif best_direction == "front":
+            result = move_one_tile()
+        elif best_direction == "left":
+            turn_90(right=False)
+            result = move_one_tile()
+        elif best_direction == "back" or best_direction == "turn_around":
+            turn_90()
+            turn_90()
+            result = move_one_tile()
+        
+        # If successful move or max attempts reached, exit the loop
+        if result != "hole":
+            return
+        
+        # If hole detected, mark this direction as invalid and try again
+        print(f"Hole detected in {best_direction} direction! Trying a different direction.")
+        
+        # Mark the coordinates where the hole was detected to avoid going there again
+        hole_x, hole_y = get_next_coords(cx, cy, best_direction)
+        save_coords(hole_x, hole_y)
+        
+        # Turn away from the hole and continue the loop to find a new direction
+        turn_90()
+    
+    # If we've tried all directions and still can't move, perform a random turn
+    print("Maximum movement attempts reached. Performing random turn.")
+    if random.choice([True, False]):
+        turn_90()
+    else:
+        turn_90(right=False)   
+
+
+def move():
+    print("___________ CURRENT: ", *current_coords());
+    if passed():
+        if not lidar_left:
+            turn_90(right=False)
+        elif not lidar_right:
+            turn_90(right=True)
+        else:
+            turn_90()
+        return
+    
+    save_coords(*current_coords());
+    # for (i, j) in coords:
+        # print("___________________________ COORDS: ", i, j, " ARE IN COORDS_SET");
+
+    if not lidar_right:
+        turn_90()
+        r = move_one_tile()
+        if r == "hole":
+            turn_90()
+            # r = random.randint(0, 1)
+            # turn_90(right=False) if r else turn_90(right=True)
+    elif lidar_front:
+        turn_90(right=False)
+        # r = random.randint(0, 1)
+        # turn_90(right=False) if r else turn_90(right=True)
+    else:
+        r = move_one_tile()
+        if r == "hole":
+            turn_90()
 
 while robot.step(timestep) != -1:
 
@@ -614,22 +808,9 @@ while robot.step(timestep) != -1:
     
     coords_right = detect_victims(camera_right.getImage(), camera_right)
     coords_left  = detect_victims(camera_left.getImage(),   camera_left)
-
-    if not lidar_right:
-        turn_90()
-        r = move_one_tile()
-        if r == "hole":
-            turn_90()
-            # r = random.randint(0, 1)
-            # turn_90(right=False) if r else turn_90(right=True)
-    elif lidar_front:
-        r = random.randint(0, 1)
-        turn_90(right=False) if r else turn_90(right=True)
-    else:
-        r = move_one_tile()
-        if r == "hole":
-            turn_90()
-
+    
+    move2();
+    
 navigate()
 
 # endregion
