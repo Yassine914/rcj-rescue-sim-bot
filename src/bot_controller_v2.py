@@ -780,10 +780,11 @@ def print_info():
 coords = set()
 
 def current_coords():
+    get_gps_readings()
     # return the current coordinates of the robot
-    x = gps_readings[0]
-    y = gps_readings[2]
-    return round(x), round(y)
+    x = round(gps_readings[0] / TILE_WIDTH) * TILE_WIDTH
+    y = round(gps_readings[2] / TILE_WIDTH) * TILE_WIDTH
+    return x, y
 
 def save_coords(x, y):
     global coords
@@ -890,6 +891,7 @@ def move2():
     # FIXME: handle getting stuck
     
     cx, cy = current_coords()
+    # add_to_map(cx, cy, '0')
     # print(f"___________ CURRENT: ({cx}, {cy})")
     
     # Check if current tile has been visited
@@ -918,9 +920,8 @@ def move2():
         save_coords(cx, cy)
         
         # TODO: get color from color sensor
-        add_to_map(cx, cy, '0')
         
-        print(f"Saving new tile: ({cx}, {cy})")
+        print(f"-----------------------------------saving new tile: ({cx}, {cy})")
     
     # Track attempt count to prevent infinite loops
     attempt_count = 0
@@ -990,7 +991,8 @@ def move2():
             result = move_one_tile()
             turn_90()
             turn_90()
-            
+        
+        
         if has_explored_most_of_the_map():
             print("- - - - - - - - - - - we have explored most of the map - - - - - -  - - - - ")
             # create_new_map()
@@ -1057,43 +1059,38 @@ def move():
         if r == "hole":
             turn_90()
             
-   
-        
+start = True
 
 def add_to_map(x, y, type):
-    global grid, max_x, max_y, min_x, min_y
+    global grid, max_x, max_y, min_x, min_y, start
     
-    x = int(x / TILE_WIDTH) + MAP_CONSTANT
-    y = int(y / TILE_WIDTH) + MAP_CONSTANT
+    x = (x // TILE_WIDTH) + MAP_CONSTANT
+    y = (y // TILE_WIDTH) + MAP_CONSTANT
+    # grid[x][y] = Tile(type, False, False, False, False)
+    print(" _________ X ________________ Y ______________ : ", x, y)
     
-    print(":::::::::::::::::::::::::::: ADDING ", x, y, " TO MAP ::::::::::::::::::::")
-    
-    # min_x = max(0, min(min_x, x));
-    # min_y = max(1, min(min_y, y));
-    # max_x = max(0, max(max_x, x));
-    # max_y = max(1, max(max_y, y));
-    
-    min_x = min(min_x, x);
-    min_y = min(min_y, y);
-    max_x = max(max_x, x);
-    max_y = max(max_y, y);
-    
-    # if max_x - min_x == 0:
-    #     max_x += 1
-    # if max_y - min_y == 0:
-    #     max_y += 1
+    # update x and y
+    if not start:
+        min_x = min(min_x, x);
+        min_y = min(min_y, y);
+        max_x = max(max_x, x);
+        max_y = max(max_y, y);
+    else:
+        min_x = x - 1
+        min_y = y - 1
+        max_x = x
+        max_y = y
+        start = False
     
     print("_______________ MAX X", max_x)
     print("_______________ MIN X", min_x)
     print("_______________ MAX Y", max_y)
     print("_______________ MIN Y", min_y)
     
-    
     print("___________ GRID SIZE: ", max_x - min_x, max_y - min_y, " ____________________")
     
-    if 0 <= x < max_x and 0 <= y < max_y:
-        print("----------------------------------------ADDING TO MAP")
-        grid[x][y] = Tile(type, False, False, False, False)
+    print(":::::::::::::::::::::::::::: ADDING ", x, y, " TO MAP ::::::::::::::::::::")
+    grid[x][y] = Tile(type, False, False, False, False)
         # match type:
         #     case "wall":       grid[x][y] = Tile('1', False, False, False, False)
         #     case "start":      grid[x][y] = Tile('5', False, False, False, False)
@@ -1105,7 +1102,7 @@ def add_to_map(x, y, type):
         #     # TODO: area transitions
             
         #     case _: grid[x][y] = Tile('0', False, False, False, False)
-            
+    
     # print map
     print("MAPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP\n\n")
     for i in range(min_y, max_y):
@@ -1113,6 +1110,9 @@ def add_to_map(x, y, type):
             print(grid[j][i].Type(), end=' ')
         print()
     print("MAPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP\n\n")
+    
+   
+    
 
 map = None
 def create_new_map():
@@ -1209,6 +1209,13 @@ while robot.step(timestep) != -1:
     coords_right = detect_victims(camera_right.getImage(), camera_right)
     coords_left  = detect_victims(camera_left.getImage(),   camera_left)
     
+    add_to_map(*current_coords(), '0')
+    # cx, cy = current_coords()
+    
+    # cx = (cx // TILE_WIDTH) + MAP_CONSTANT
+    # cy = (cy // TILE_WIDTH) + MAP_CONSTANT
+    
+    # print(":::::::::::::::::::::MOVED TO TILE::::::::::::::::::::::: ", cx, cy)
     move2();
     
 navigate()
