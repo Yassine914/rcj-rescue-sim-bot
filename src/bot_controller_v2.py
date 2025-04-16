@@ -539,10 +539,10 @@ def detect_letters2(sign) -> str:
     contours_third, _ = cv.findContours(third_section, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
     
     # Output images for debugging
-    cv.imshow("First Section", first_section)
-    cv.imshow("Middle Section", middle_section)
-    cv.imshow("Third Section", third_section)
-    cv.waitKey(1)
+    # cv.imshow("First Section", first_section)
+    # cv.imshow("Middle Section", middle_section)
+    # cv.imshow("Third Section", third_section)
+    # cv.waitKey(1)
     
     num_contours_first = len(contours_first)
     num_contours_middle = len(contours_middle)
@@ -590,9 +590,9 @@ def detect_letters_old(sign) -> str:
     contours_third, _ = cv.findContours(third_section, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
 
     # output image for debugging
-    cv.imshow("First Section", first_section)
-    cv.imshow("Third Section", third_section)
-    cv.waitKey(1)
+    # cv.imshow("First Section", first_section)
+    # cv.imshow("Third Section", third_section)
+    # cv.waitKey(1)
 
     num_contours_first = len(contours_first)
     num_contours_middle = len(contours_middle)
@@ -972,7 +972,8 @@ def move2():
         elif directions:
             # best_direction = directions[0][0];
             # NOTE:
-            print(f"All directions visited, using priority direction: {best_direction}")
+            # print(f"All directions visited, using priority direction: {best_direction}")
+            print("ALL DIRECTIONS VISITED. MOVING TO NEAREST UNVISITED TILE")
             move_to_unvisited_tile(cx, cy)
             return # FIXME: remove this
         else:
@@ -1067,7 +1068,15 @@ def move():
 def get_new_direction(dx, dy):
     # Get the compass value rounded to the nearest 90 degrees
     compass_value_rounded = round(compass_value / 90) * 90
-   
+    
+    if dx == 0 and dy == 0 and compass_value_rounded == 0:
+        return "f"
+    if dx == 0 and dy == 0 and compass_value_rounded == 90:
+        return "r"
+    if dx == 0 and dy == 0 and compass_value_rounded == -90:
+        return "l"
+    if dx == 0 and dy == 0 and abs(compass_value_rounded) == 180:
+        return "b"
     if dx == 0 and dy == -1 and compass_value_rounded == 0:
         return "f"
     if dx == 0 and dy == -1 and compass_value_rounded == 90:
@@ -1103,13 +1112,15 @@ def get_new_direction(dx, dy):
     
     return None
 
-def get_directions_to_unvisited_tile(cx, cy):
+def get_directions_to_unvisited_tile(cx, cy) -> str:
+    path = ""
     # use bfs to find the closest unvisited tile
     q = deque()
-    q.append((cx, cy, ""))
+    q.append((cx, cy, get_new_direction(0, 0)))
     
     while q:
         x, y, d = q.popleft()
+        path += str(d)
         
         # check if the tile is unvisited
         if grid[x][y].type == '-1':
@@ -1129,10 +1140,10 @@ def get_directions_to_unvisited_tile(cx, cy):
         # add neighbors to the queue
         for (dx, dy) in dirs:
             nx, ny = x + dx, y + dy
-            if 0 <= nx <= max_x + 1 and 0 <= ny <= max_y + 1and grid[nx][ny].type != '-1':
+            if 0 <= nx <= max_x + 1 and 0 <= ny <= max_y + 1 and grid[nx][ny].type != '-1':
                 q.append((nx, ny, d + get_new_direction(x, y, dx, dy)))
+    return path
                 
-    return (None, None)
 
 def move_to_unvisited_tile(cx, cy):
     # get the direction to the unvisited tile
@@ -1214,7 +1225,14 @@ def add_to_map(x, y, type):
     print("___________ GRID SIZE: ", max_x - min_x, max_y - min_y, " ____________________")
     
     print(":::::::::::::::::::::::::::: ADDING ", x, y, " TO MAP ::::::::::::::::::::")
-    grid[x - 1][y - 1] = Tile(type, False, False, False, False)
+    # get walls
+    n = True if lidar_front else False
+    s = True if lidar_back else False
+    e = True if lidar_right else False
+    w = True if lidar_left else False
+    print("___________________________ WALLS: ", n, s, e, w)
+    
+    grid[x - 1][y - 1] = Tile(type, n, s, e, w)
         # match type:
         #     case "wall":       grid[x][y] = Tile('1', False, False, False, False)
         #     case "start":      grid[x][y] = Tile('5', False, False, False, False)
