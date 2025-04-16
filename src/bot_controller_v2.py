@@ -921,7 +921,7 @@ def move2():
         save_coords(cx, cy)
         
         # TODO: get color from color sensor
-        add_to_map(cx, cy, 0)
+        add_to_map(cx, cy, '0')
         
         print(f"Saving new tile: ({cx}, {cy})")
     
@@ -1068,29 +1068,43 @@ def add_to_map(x, y, type):
     x = int(x / TILE_WIDTH) + MAP_CONSTANT
     y = int(y / TILE_WIDTH) + MAP_CONSTANT
     
-    min_x = min(min_x, x);
-    min_y = min(min_y, y);
-    max_x = max(max_x, x);
-    max_y = max(max_y, y);
+    print(":::::::::::::::::::::::::::: ADDING ", x, y, " TO MAP ::::::::::::::::::::")
+    
+    min_x = max(0, min(min_x, x));
+    min_y = max(1, min(min_y, y));
+    max_x = max(0, max(max_x, x));
+    max_y = max(1, max(max_y, y));
+    
+    if max_x - min_x == 0:
+        max_x += 1
+    if max_y - min_y == 0:
+        max_y += 1
+    
+    
+    print("___________ GRID SIZE: ", max_x - min_x, max_y - min_y, " ____________________")
     
     if 0 <= x < len(grid) and 0 <= y < len(grid[0]):
-        match type:
-            case "wall":       grid[x][y] = Tile('1', False, False, False, False)
-            case "start":      grid[x][y] = Tile('5', False, False, False, False)
-            case "ground":     grid[x][y] = Tile('0', False, False, False, False)
-            case "hole":       grid[x][y] = Tile('2', False, False, False, False)
-            case "swamp":      grid[x][y] = Tile('3', False, False, False, False)
-            case "checkpoint": grid[x][y] = Tile('4', False, False, False, False)
+        print("----------------------------------------ADDING TO MAP")
+        grid[x][y] = Tile(type, False, False, False, False)
+        # match type:
+        #     case "wall":       grid[x][y] = Tile('1', False, False, False, False)
+        #     case "start":      grid[x][y] = Tile('5', False, False, False, False)
+        #     case "ground":     grid[x][y] = Tile('0', False, False, False, False)
+        #     case "hole":       grid[x][y] = Tile('2', False, False, False, False)
+        #     case "swamp":      grid[x][y] = Tile('3', False, False, False, False)
+        #     case "checkpoint": grid[x][y] = Tile('4', False, False, False, False)
             
-            # TODO: area transitions
+        #     # TODO: area transitions
             
-            case _: grid[x][y] = Tile('0', False, False, False, False)
+        #     case _: grid[x][y] = Tile('0', False, False, False, False)
             
     # print map
-    for i in range(min_x, max_x):
-        for j in range(min_y, max_y):
-            print(grid[i][j].Type(), end=' ')
+    print("MAPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP\n\n")
+    for i in range(min_y, max_y):
+        for j in range(min_x, max_x):
+            print(grid[j][i].Type(), end=' ')
         print()
+    print("MAPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP\n\n")
 
 map = None
 def create_new_map():
@@ -1135,7 +1149,7 @@ def create_new_map():
                     map[k][m + 4] = 1 if grid[i][j].S() else 0
             
             n += 4
-            m += 4
+        m += 4
             
     # print the map
     for i in range(min_x, max_x + 1):
