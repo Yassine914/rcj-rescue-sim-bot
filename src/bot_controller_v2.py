@@ -1064,30 +1064,100 @@ def move():
         if r == "hole":
             turn_90()
 
-def move_to_unvisited_tile(cx, cy):
+def get_new_direction(dx, dy):
+    # Get the compass value rounded to the nearest 90 degrees
+    compass_value_rounded = round(compass_value / 90) * 90
+   
+    if dx == 0 and dy == -1 and compass_value_rounded == 0:
+        return "f"
+    if dx == 0 and dy == -1 and compass_value_rounded == 90:
+        return "r"
+    if dx == 0 and dy == -1 and compass_value_rounded == -90:
+        return "l"
+    if dx == 0 and dy == -1 and abs(compass_value_rounded) == 180:
+        return "b"
+    if dx == 0 and dy == 1 and compass_value_rounded == 0:
+        return "b"
+    if dx == 0 and dy == 1 and compass_value_rounded == 90:
+        return "l"
+    if dx == 0 and dy == 1 and compass_value_rounded == -90:
+        return "r"
+    if dx == 0 and dy == 1 and abs(compass_value_rounded) == 180:
+        return "f"
+    if dx == -1 and dy == 0 and compass_value_rounded == 0:
+        return "l"
+    if dx == -1 and dy == 0 and compass_value_rounded == 90:
+        return "b"
+    if dx == -1 and dy == 0 and compass_value_rounded == -90:
+        return "f"
+    if dx == -1 and dy == 0 and abs(compass_value_rounded) == 180:
+        return "r"
+    if dx == 1 and dy == 0 and compass_value_rounded == 0:
+        return "r"
+    if dx == 1 and dy == 0 and compass_value_rounded == 90:
+        return "f"
+    if dx == 1 and dy == 0 and compass_value_rounded == -90:
+        return "b"
+    if dx == 1 and dy == 0 and abs(compass_value_rounded) == 180:
+        return "l"
+    
+    return None
+
+def get_directions_to_unvisited_tile(cx, cy):
     # use bfs to find the closest unvisited tile
     q = deque()
-    q.append((cx, cy))
+    q.append((cx, cy, ""))
     
     while q:
-        x, y = q.popleft()
+        x, y, d = q.popleft()
         
         # check if the tile is unvisited
         if grid[x][y].type == '-1':
-            return (x, y) # TODO: move to x, y
+            return d
         
+        # add possible directions to the list
+        dirs = []
+        if not grid[x][y].N(): # no wall North
+            dirs.append((x, y - 1))
+        if not grid[x][y].S(): # no wall South
+            dirs.append((x, y + 1))
+        if not grid[x][y].E(): # no wall East
+            dirs.append((x + 1, y))
+        if not grid[x][y].W(): # no wall West
+            dirs.append((x - 1, y))
+            
         # add neighbors to the queue
-        # FIXME: remove impossible direction due to walls
-        for dx, dy in [(-1, 0), (0, -1), (1, 0), (0, 1)]:
+        for (dx, dy) in dirs:
             nx, ny = x + dx, y + dy
             if 0 <= nx <= max_x + 1 and 0 <= ny <= max_y + 1and grid[nx][ny].type != '-1':
-                q.append((nx, ny))
+                q.append((nx, ny, d + get_new_direction(x, y, dx, dy)))
                 
     return (None, None)
 
-def move_to_tile(x, y):
-    # shortest path (dikstras?)
-    pass
+def move_to_unvisited_tile(cx, cy):
+    # get the direction to the unvisited tile
+    directions = get_directions_to_unvisited_tile(cx, cy)
+    print("___________________________ DIRECTIONS: ", directions)
+    
+    if directions is None:
+        print("No unvisited tiles found")
+        return
+    
+    # move to the unvisited tile
+    for d in directions:
+        if d == "f":
+            move_one_tile()
+        elif d == "r":
+            turn_90(right=True)
+            move_one_tile()
+        elif d == "l":
+            turn_90(right=False)
+            move_one_tile()
+        elif d == "b":
+            turn_90()
+            turn_90()
+            move_one_tile()
+    
 
 
 # def move3():
