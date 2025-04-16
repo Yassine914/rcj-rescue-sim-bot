@@ -1,3 +1,4 @@
+from collections import deque
 from controller import Robot
 import math
 import numpy as np
@@ -969,8 +970,11 @@ def move2():
             best_direction = unvisited_directions[0]
             print(f"Moving to unvisited direction: {best_direction}")
         elif directions:
-            best_direction = directions[0][0];
+            # best_direction = directions[0][0];
+            # NOTE:
             print(f"All directions visited, using priority direction: {best_direction}")
+            move_to_unvisited_tile(cx, cy)
+            return # FIXME: remove this
         else:
             # This shouldn't happen due to the earlier check, but just in case
             best_direction = "turn_around"
@@ -1059,6 +1063,53 @@ def move():
         r = move_one_tile()
         if r == "hole":
             turn_90()
+
+def move_to_unvisited_tile(cx, cy):
+    # use bfs to find the closest unvisited tile
+    q = deque()
+    q.append((cx, cy))
+    
+    while q:
+        x, y = q.popleft()
+        
+        # check if the tile is unvisited
+        if grid[x][y].type == '-1':
+            return (x, y) # TODO: move to x, y
+        
+        # add neighbors to the queue
+        # FIXME: remove impossible direction due to walls
+        for dx, dy in [(-1, 0), (0, -1), (1, 0), (0, 1)]:
+            nx, ny = x + dx, y + dy
+            if 0 <= nx <= max_x + 1 and 0 <= ny <= max_y + 1and grid[nx][ny].type != '-1':
+                q.append((nx, ny))
+                
+    return (None, None)
+
+def move_to_tile(x, y):
+    # shortest path (dikstras?)
+    pass
+
+
+# def move3():
+#     global old_x, old_y, coords
+    
+#     # FIXME: handle getting stuck
+#     cx, cy = current_coords()
+#     x = (cx // TILE_WIDTH) + MAP_CONSTANT
+#     y = (cy // TILE_WIDTH) + MAP_CONSTANT
+    
+#     current_visited = passed()
+    
+#     if not current_visited:
+#         save_coords(cx, cy)
+#         # TODO: get color from color sensor
+#         print(f"-----------------------------------saving new tile: ({cx}, {cy})")
+        
+#     nx, ny = find_unvisited_tile(x, y)
+    
+#     move_to_tile(nx, ny)
+    
+#     pass
             
 start = True
 
