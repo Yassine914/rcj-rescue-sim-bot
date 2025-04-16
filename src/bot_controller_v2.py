@@ -219,7 +219,7 @@ def stop(duration):
 
 start = robot.getTime()
 
-def move_one_tile():
+def move_one_tile(tile_size=TILE_WIDTH):
     global coords
     
 
@@ -236,8 +236,8 @@ def move_one_tile():
     y = gps_readings[2]
 
     # round x and y to nearest multiple of 12
-    x = round(x / TILE_WIDTH) * TILE_WIDTH
-    y = round(y / TILE_WIDTH) * TILE_WIDTH
+    x = round(x / tile_size) * tile_size 
+    y = round(y / tile_size) * tile_size 
 
     # save_coords(x, y);
     
@@ -247,22 +247,22 @@ def move_one_tile():
     if compass_value_rounded_to_nearest_90 in (90, -90):
         if compass_value_rounded_to_nearest_90 == 90:
             # if the robot is facing 90, then we should move to the left, so we subtract 12 from x
-            x_new = x - TILE_WIDTH
+            x_new = x -  tile_size
             y_new = y
         else:
             # if the robot is facing -90, then we should move to the right, so we add 12 to x
-            x_new = x + TILE_WIDTH
+            x_new = x + tile_size 
             y_new = y
 
     else:
         # if the robot is facing 0, then we should move up, so we subtract 12 from y
         if compass_value_rounded_to_nearest_90 == 0:
             x_new = x
-            y_new = y - TILE_WIDTH
+            y_new = y - tile_size
         else:
             # if the robot is facing 180, then we should move down, so we add 12 to y
             x_new = x
-            y_new = y + TILE_WIDTH
+            y_new = y + tile_size
             
     while robot.step(timestep) != -1:
 
@@ -763,7 +763,8 @@ def detect_letters3(sign) -> str:
 
 # endregion
 
-# region main
+
+# region movement_2
 
 def navigate():
     global counter
@@ -837,12 +838,59 @@ def get_next_coords(x, y, direction):
         return x + TILE_WIDTH, y
     else:  # South (180 or -180)
         return x, y + TILE_WIDTH
+    
+max_x = -299
+max_y = -299
+min_x = 299
+min_y = 299
 
+MAP_CONSTANT = 50 # Add 50 to idx to make them +ve
+
+class Tile:
+    def __init__(self, type, n, s, e, w):
+        self.type = type
+        self.n = n
+        self.s = s
+        self.e = e
+        self.w = w
+        
+    def N(self):
+        return self.n
+    
+    def S(self):
+        return self.s
+    
+    def E(self):
+        return self.e
+    
+    def W(self):
+        return self.w
+    
+    def Type(self):
+        return self.type
+ 
+grid = [[Tile(-1, False, False, False, False) for _ in range(300)] for _ in range(300)]
+
+def has_explored_most_of_the_map() -> bool:
+    # return False;
+    global grid, min_x, min_y, max_x, max_y
+    unexplored_count = sum(1 for x in range(min_x + MAP_CONSTANT, max_x + 1) for y in range(min_y, max_y + 1) if 0 <= x + MAP_CONSTANT < len(grid) and 0 <= y + MAP_CONSTANT < len(grid[0]) and grid[x + MAP_CONSTANT][y + MAP_CONSTANT].type == -1)
+    total_cells = (abs(min_x) + max_x + 1) * (abs(min_y) + max_y + 1)
+    if total_cells == 0:
+        total_cells = 100
+    
+    ratio = (unexplored_count / total_cells) * 100
+    
+    print("______________________ UNEXPLORED PERCENTAGE: " + str(ratio) + "%")
+    return ratio <= 10 and ratio > 0
+    
 
 old_x, old_y = None, None
 # Zeyad was here
 def move2():
     global old_x, old_y, coords
+    
+    # FIXME: handle getting stuck
     
     cx, cy = current_coords()
     # print(f"___________ CURRENT: ({cx}, {cy})")
@@ -850,21 +898,31 @@ def move2():
     # Check if current tile has been visited
     current_visited = passed()
     
-    if old_x is not None and old_y is not None:
-        # Check if the robot has moved to a new tile
-        if (cx, cy) != (old_x, old_y):
-            # Save the previous coordinates as visited
-            save_coords(old_x, old_y)
-            print(f"Saving new tile: ({old_x}, {old_y})")
-        else:
-            # If the robot hasn't moved, return early
-            turn_90()
-            move_one_tile()
-            return
+    # if old_x is not None and old_y is not None:
+    #     # Check if the robot has moved to a new tile
+    #     print("___________________________ OLD: ", old_x, old_y)
+    #     print("___________________________ CURRENT: ", cx, cy)
+    #     dist = math.sqrt(
+    #         (cx - old_x) ** 2 + (cy - old_y) ** 2
+    #     )
+    #     if dist < TILE_WIDTH / 2:
+    #         # Save the previous coordinates as visited
+    #         # turn_90()
+    #         # turn_90()
+    #         move_one_tile(TILE_WIDTH // 2)
+    #         turn_90()
+    #     else:
+    #         save_coords(old_x, old_y)
+    #         # If the robot hasn't moved, return early
+    #         return
     
     # Save the current coordinates as visited if not already visited
     if not current_visited:
         save_coords(cx, cy)
+        
+        # TODO: get color from color sensor
+        add_to_map(cx, cy, 0)
+        
         print(f"Saving new tile: ({cx}, {cy})")
     
     # Track attempt count to prevent infinite loops
@@ -936,7 +994,10 @@ def move2():
             turn_90()
             turn_90()
             
-        old_x, old_y = cx, cy
+        if has_explored_most_of_the_map():
+            create_new_map()
+            submit_map()
+            
         
         # If successful move or max attempts reached, exit the loop
         if result != "hole":
@@ -951,6 +1012,10 @@ def move2():
         
         # Turn away from the hole and continue the loop to find a new direction
         turn_90()
+        turn_90()
+        move_one_tile(tile_size=3)
+        old_x, old_y = cx, cy
+        
     
     # If we've tried all directions and still can't move, perform a random turn
     print("Maximum movement attempts reached. Performing random turn.")
@@ -993,6 +1058,122 @@ def move():
         r = move_one_tile()
         if r == "hole":
             turn_90()
+            
+   
+        
+
+def add_to_map(x, y, type):
+    global grid, max_x, max_y, min_x, min_y
+    
+    x = int(x / TILE_WIDTH) + MAP_CONSTANT
+    y = int(y / TILE_WIDTH) + MAP_CONSTANT
+    
+    min_x = min(min_x, x);
+    min_y = min(min_y, y);
+    max_x = max(max_x, x);
+    max_y = max(max_y, y);
+    
+    if 0 <= x < len(grid) and 0 <= y < len(grid[0]):
+        match type:
+            case "wall":       grid[x][y] = Tile('1', False, False, False, False)
+            case "start":      grid[x][y] = Tile('5', False, False, False, False)
+            case "ground":     grid[x][y] = Tile('0', False, False, False, False)
+            case "hole":       grid[x][y] = Tile('2', False, False, False, False)
+            case "swamp":      grid[x][y] = Tile('3', False, False, False, False)
+            case "checkpoint": grid[x][y] = Tile('4', False, False, False, False)
+            
+            # TODO: area transitions
+            
+            case _: grid[x][y] = Tile('0', False, False, False, False)
+            
+    # print map
+    for i in range(min_x, max_x):
+        for j in range(min_y, max_y):
+            print(grid[i][j].Type(), end=' ')
+        print()
+
+map = None
+def create_new_map():
+    global grid, max_x, max_y, min_x, min_y, map
+    # area becomes [4 * (max_x + abs(min_x)), 4 * (max_y + abs(min_y))]
+    MAX_X = 4 *(max_x + abs(min_x) + 1) + 1
+    MAX_Y = 4 * (max_y + abs(min_y) + 1) + 1
+    map = [['0'] * (MAX_X) for _ in range(MAX_Y)]
+    
+    print("___________ TYPE OF GRID CELL: ", type(grid[0][0]))
+    
+    # loop over the og grid from (min_x, min_y) to (max_x, max_y)
+    # each tile becomes 4x4 with the same value on the corners and 0 in the middle
+    
+    n, m = 0, 0
+    # every tile add 4 to n, m
+    
+    for i in range(min_x, max_x + 1):
+        for j in range(min_y, max_y + 1):
+            
+            print("_____________________________ DLSKJKSDLFKJ: ", grid[i][j].Type())
+            # convert to 4x4
+            
+            for k in range(m, m + 4):
+                map[n][k] = 1 if grid[i][j].N() else 0
+            
+            for k in range(n + 1, n + 4):
+                map[k][m] = 1 if grid[i][j].W() else 0
+            
+            map[n + 1][m + 1] = grid[i][j].Type()
+            map[n + 3][m + 1] = grid[i][j].Type()
+            map[n + 1][m + 3] = grid[i][j].Type()
+            map[n + 3][m + 3] = grid[i][j].Type()
+            
+            # rightmost side (handle east wall)
+            if i == max_x:
+                for k in range(m, m + 5):
+                    map[n + 4][k] = 1 if grid[i][j].E() else 0
+                
+            if j == max_y:
+                for k in range(n, n + 5):
+                    map[k][m + 4] = 1 if grid[i][j].S() else 0
+            
+            n += 4
+            m += 4
+            
+    # print the map
+    for i in range(min_x, max_x + 1):
+        for j in range(min_y, max_y + 1):
+            print(grid[i][j].Type(), end=' ')
+        print()
+    
+            
+def submit_map():
+    submat = np.array(map, dtype=str)
+    
+    s = submat.shape
+    ## Get shape as bytes
+    s_bytes = struct.pack('2i',*s)
+
+    ## Flattening the matrix and join with ','
+    flatMap = ','.join(submat.flatten())
+    ## Encode
+    sub_bytes = flatMap.encode('utf-8')
+
+    ## Add togeather, shape + map
+    a_bytes = s_bytes + sub_bytes
+
+    ## Send map data
+    emitter.send(a_bytes)
+
+    #STEP3 Send map evaluate request
+    map_evaluate_request = struct.pack('c', b'M')
+    emitter.send(map_evaluate_request)
+
+    #STEP4 Send an Exit message to get Map Bonus
+    ## Exit message
+    exit_mes = struct.pack('c', b'E')
+    emitter.send(exit_mes)
+
+# endregion
+
+# region main
 
 while robot.step(timestep) != -1:
 
