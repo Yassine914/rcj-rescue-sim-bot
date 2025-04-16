@@ -891,9 +891,10 @@ def move2():
     # FIXME: handle getting stuck
     
     cx, cy = current_coords()
+    x = (cx // TILE_WIDTH) + MAP_CONSTANT
+    y = (cy // TILE_WIDTH) + MAP_CONSTANT
     # add_to_map(cx, cy, '0')
     # print(f"___________ CURRENT: ({cx}, {cy})")
-    
     # Check if current tile has been visited
     current_visited = passed()
     
@@ -1066,7 +1067,6 @@ def add_to_map(x, y, type):
     
     x = (x // TILE_WIDTH) + MAP_CONSTANT
     y = (y // TILE_WIDTH) + MAP_CONSTANT
-    # grid[x][y] = Tile(type, False, False, False, False)
     print(" _________ X ________________ Y ______________ : ", x, y)
     
     # update x and y
@@ -1082,15 +1082,18 @@ def add_to_map(x, y, type):
         max_y = y
         start = False
     
-    print("_______________ MAX X", max_x)
     print("_______________ MIN X", min_x)
-    print("_______________ MAX Y", max_y)
     print("_______________ MIN Y", min_y)
+    print("_______________ MAX X", max_x)
+    print("_______________ MAX Y", max_y)
+    
+    print("__________ STARTING: ", min_x, min_y, " ____________________")
+    print("__________ ENDING  : ", max_x, max_y, " ____________________")
     
     print("___________ GRID SIZE: ", max_x - min_x, max_y - min_y, " ____________________")
     
     print(":::::::::::::::::::::::::::: ADDING ", x, y, " TO MAP ::::::::::::::::::::")
-    grid[x][y] = Tile(type, False, False, False, False)
+    grid[x - 1][y - 1] = Tile(type, False, False, False, False)
         # match type:
         #     case "wall":       grid[x][y] = Tile('1', False, False, False, False)
         #     case "start":      grid[x][y] = Tile('5', False, False, False, False)
@@ -1109,6 +1112,8 @@ def add_to_map(x, y, type):
         for j in range(min_x, max_x):
             print(grid[j][i].Type(), end=' ')
         print()
+        
+    # grid[x][y] = Tile(type, False, False, False, False)
     print("MAPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP\n\n")
     
    
