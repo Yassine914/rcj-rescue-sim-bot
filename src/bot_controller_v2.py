@@ -763,7 +763,6 @@ def detect_letters3(sign) -> str:
 
 # endregion
 
-
 # region movement_2
 
 def navigate():
@@ -803,9 +802,6 @@ def passed():
     return False
 
 def get_next_coords(x, y, direction):
-    """
-    Calculate the next coordinates based on current position and direction.
-    """
     # Get the compass value rounded to the nearest 90 degrees
     compass_value_rounded = round(compass_value / 90) * 90
     
@@ -839,12 +835,13 @@ def get_next_coords(x, y, direction):
     else:  # South (180 or -180)
         return x, y + TILE_WIDTH
     
-max_x = -299
-max_y = -299
-min_x = 299
-min_y = 299
-
 MAP_CONSTANT = 50 # Add 50 to idx to make them +ve
+
+max_x = 1 + MAP_CONSTANT
+max_y = 1 + MAP_CONSTANT
+min_x = 0 + MAP_CONSTANT
+min_y = 0 + MAP_CONSTANT
+
 
 class Tile:
     def __init__(self, type, n, s, e, w):
@@ -995,8 +992,9 @@ def move2():
             turn_90()
             
         if has_explored_most_of_the_map():
-            create_new_map()
-            submit_map()
+            print("- - - - - - - - - - - we have explored most of the map - - - - - -  - - - - ")
+            # create_new_map()
+            # submit_map()
             
         
         # If successful move or max attempts reached, exit the loop
@@ -1070,20 +1068,30 @@ def add_to_map(x, y, type):
     
     print(":::::::::::::::::::::::::::: ADDING ", x, y, " TO MAP ::::::::::::::::::::")
     
-    min_x = max(0, min(min_x, x));
-    min_y = max(1, min(min_y, y));
-    max_x = max(0, max(max_x, x));
-    max_y = max(1, max(max_y, y));
+    # min_x = max(0, min(min_x, x));
+    # min_y = max(1, min(min_y, y));
+    # max_x = max(0, max(max_x, x));
+    # max_y = max(1, max(max_y, y));
     
-    if max_x - min_x == 0:
-        max_x += 1
-    if max_y - min_y == 0:
-        max_y += 1
+    min_x = min(min_x, x);
+    min_y = min(min_y, y);
+    max_x = max(max_x, x);
+    max_y = max(max_y, y);
+    
+    # if max_x - min_x == 0:
+    #     max_x += 1
+    # if max_y - min_y == 0:
+    #     max_y += 1
+    
+    print("_______________ MAX X", max_x)
+    print("_______________ MIN X", min_x)
+    print("_______________ MAX Y", max_y)
+    print("_______________ MIN Y", min_y)
     
     
     print("___________ GRID SIZE: ", max_x - min_x, max_y - min_y, " ____________________")
     
-    if 0 <= x < len(grid) and 0 <= y < len(grid[0]):
+    if 0 <= x < max_x and 0 <= y < max_y:
         print("----------------------------------------ADDING TO MAP")
         grid[x][y] = Tile(type, False, False, False, False)
         # match type:
@@ -1125,7 +1133,7 @@ def create_new_map():
     for i in range(min_x, max_x + 1):
         for j in range(min_y, max_y + 1):
             
-            print("_____________________________ DLSKJKSDLFKJ: ", grid[i][j].Type())
+            # print("_____________________________ : ", grid[i][j].Type())
             # convert to 4x4
             
             for k in range(m, m + 4):
