@@ -840,7 +840,7 @@ def save_coords(x, y):
     global coords
     coords.add((x, y))
     
-def passed():
+def has_already_passed_current_tile():
     cx, cy = current_coords()
     for (i, j) in coords:
         if math.sqrt(
@@ -939,8 +939,64 @@ def has_explored_most_of_the_map() -> bool:
 # NEW MOVE FUNCTION
 
 def move_final():
+    global min_x, min_y, max_x, max_y, grid
+    
     cx, cy = get_grid_coords()
-    print("CURRENT COORDS: ", cx, cy)
+    print("entered movement function")
+    print(f"current position: ({cx}, {cy})")
+    
+    # use the map to determine visited and unvisited cells
+    
+    if grid[cx][cy].type == '-1':
+        # FIXME: add type to the cell
+        add_to_map(cx, cy, '0')
+        
+    # before moving using the stack, move normally untill we are surrounded by visited tiles
+        
+    # push neighboring -1s to a stack in order to reverse explore the map later
+    stack = []
+    # if opposite walls match then go there
+    # NOTE: if we go out of grid bounds add another row/col
+    n, s, e, w = grid[cx][cy].N(), grid[cx][cy].S(), grid[cx][cy].E(), grid[cx][cy].W()
+    
+    # NOTE: ADDED POSSIBLE DIRECTIONS TO THE STACK (should be in a loop)
+    if not n: # no north wall
+        if grid[cx][cy - 1].type == '-1' and not grid[cx][cy - 1].S():
+            stack.append((cx, cy - 1))
+            
+            # FIXME: NOTE: increase map size if needed
+            if cy - 1 < min_y:
+                min_y = cy - 1
+                for i in range(min_x, max_x + 1):
+                    grid[i][min_y] = Tile('-1', False, False, False, False)
+            
+    if not s: # no south wall
+        if grid[cx][cy + 1].type == '-1' and not grid[cx][cy + 1].N():
+            stack.append((cx, cy + 1))
+            
+            if cy + 1 > max_y:
+                max_y = cy + 1
+                for i in range(min_x, max_x + 1):
+                    grid[i][max_y] = Tile('-1', False, False, False, False)
+    
+    if not e: # no east wall
+        if grid[cx + 1][cy].type == '-1' and not grid[cx + 1][cy].W():
+            stack.append((cx + 1, cy))
+            
+            if cx + 1 > max_x:
+                max_x = cx + 1
+                for i in range(min_y, max_y + 1):
+                    grid[max_x][i] = Tile('-1', False, False, False, False)
+                    
+    if not w: # no west wall
+        if grid[cx - 1][cy].type == '-1' and not grid[cx - 1][cy].E():
+            stack.append((cx - 1, cy))
+            
+            if cx - 1 < min_x:
+                min_x = cx - 1
+                for i in range(min_y, max_y + 1):
+                    grid[min_x][i] = Tile('-1', False, False, False, False)
+    
     return
 
 def get_grid_coords(x=None, y=None) -> tuple:
@@ -964,6 +1020,49 @@ def save_coords(x, y):
            
 start = True
 
+
+def get_compass_rounded() -> int:
+    compass_rounded = round(compass_value / 90) * 90
+    
+    if compass_rounded > 180:
+        compass_rounded -= 360
+    elif compass_rounded < -180:
+        compass_rounded += 360
+    
+    return compass_rounded
+
+def get_global_walls() -> tuple:
+    global lidar_front, lidar_back, lidar_left, lidar_right
+    
+    compass_rounded = get_compass_rounded()
+    
+    print("current direction: ", "north" if compass_rounded == 0 else "south" if abs(compass_rounded) == 180 else "west" if compass_rounded == 90 else "east")
+    
+    f, b, l, r = (lidar_front, lidar_back, lidar_left, lidar_right)
+    if compass_rounded == 0: # facing north
+        f = lidar_front
+        b = lidar_back
+        l = lidar_left
+        r = lidar_right
+    elif abs(compass_rounded) == 180: # facing south
+        f = lidar_back
+        b = lidar_front
+        l = lidar_right
+        r = lidar_left
+    elif compass_rounded == 90: # facing west
+        f = lidar_right
+        b = lidar_left
+        l = lidar_front
+        r = lidar_back
+    else:                      # facing east
+        f = lidar_left
+        b = lidar_right
+        l = lidar_back
+        r = lidar_front
+   
+    # ret   n  s  e  w
+    return (f, b, r, l)
+
 def add_to_map(x, y, type):
     global grid, max_x, max_y, min_x, min_y, start
     
@@ -974,52 +1073,34 @@ def add_to_map(x, y, type):
         max_x = max(max_x, x);
         max_y = max(max_y, y);
     else:
-        min_x = x - 2
-        min_y = y - 2
-        max_x = x
-        max_y = y
+        min_x = x
+        min_y = y
+        max_x = x + 2
+        max_y = y + 2
         start = False
     
-    # print("_______________ MIN X", min_x)
-    # print("_______________ MIN Y", min_y)
-    # print("_______________ MAX X", max_x)
-    # print("_______________ MAX Y", max_y)
+    print(f"grid starts from ({min_x}, {min_y}) and ends at ({max_x}, {max_y})")
+    print(f"grid size: {max_x - min_x} x {max_y - min_y}")
     
-    print("__________ STARTING: ", min_x, min_y, " ____________________")
-    print("__________ ENDING  : ", max_x, max_y, " ____________________")
+    print(f"adding ({x}, {y}) to grid")
     
-    print("___________ GRID SIZE: ", max_x - min_x, max_y - min_y, " ____________________")
-    
-    print(":::::::::::::::::::::::::::: ADDING ", x, y, " TO MAP ::::::::::::::::::::")
     # get walls
-    n = True if lidar_front else False
-    s = True if lidar_back else False
-    e = True if lidar_right else False
-    w = True if lidar_left else False
-    print("___________________________ WALLS: ", n, s, e, w)
+    n, s, e, w = get_global_walls()
+    print(f"\twalls: north: {n}, south: {s}, east: {e}, west: {w}")
     
-    grid[x - 1][y - 1] = Tile(type, n, s, e, w)
-        # match type:
-        #     case "wall":       grid[x][y] = Tile('1', False, False, False, False)
-        #     case "start":      grid[x][y] = Tile('5', False, False, False, False)
-        #     case "ground":     grid[x][y] = Tile('0', False, False, False, False)
-        #     case "hole":       grid[x][y] = Tile('2', False, False, False, False)
-        #     case "swamp":      grid[x][y] = Tile('3', False, False, False, False)
-        #     case "checkpoint": grid[x][y] = Tile('4', False, False, False, False)
-            
-        #     # TODO: area transitions
-            
-        #     case _: grid[x][y] = Tile('0', False, False, False, False)
-    
+    # FIXME: check why it works as x - 1, y - 1
+    if grid[x][y].type == '-1':
+        grid[x][y] = Tile(type, n, s, e, w)
+   
     # print map
-    print("MAPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP\n\n")
+    print("---map start---\n\n")
     for i in range(min_y, max_y):
         for j in range(min_x, max_x):
             print(grid[j][i].Type(), end=' ')
         print()
         
     # grid[x][y] = Tile(type, False, False, False, False)
-    print("MAPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP\n\n")
+    print("---map end---\n\n")
     
 
 map = None
