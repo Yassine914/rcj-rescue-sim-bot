@@ -223,13 +223,6 @@ start = robot.getTime()
 def move_one_tile(tile_size=TILE_WIDTH):
     global coords
     
-
-    # in this function, first we get the current x and y of the robot
-    # then we round x and y to the nearest multiple of 12 (because the tiles are 12x12)
-    # then we calculate the new x or y the robot should move to
-    # then we start moving the robot using the while loop
-
-    # round robot compass value to the nearest multiple of 90 (0, 90, 180, -90)
     compass_value_rounded_to_nearest_90 = round(compass_value / 90) * 90
 
     # get the current x and y of the robot
@@ -306,8 +299,7 @@ def move_one_tile(tile_size=TILE_WIDTH):
         # if the robot sees an object in front of him, we break the loop, then the function will end
         if lidar_front:
             break
-
-
+        
         # we look at the current robot position and the new position he should move to (if the difference is smaller than 1, then the robot reached the new position)
         # if the robot is moving horizontally, we should check if the robot reached the new x coordinate
 
@@ -690,8 +682,8 @@ def detect_letters3(sign) -> str:
     # cv.imshow("letter" , letter)
     # save letter
     
-    cv.imwrite("sign.png", sign)
-    cv.imwrite("letter.png", letter)
+    # cv.imwrite("sign.png", sign)
+    # cv.imwrite("letter.png", letter)
 
     # filling the background of the img with black
     h, w = letter.shape
@@ -868,7 +860,7 @@ class Tile:
     def Type(self):
         return self.type
  
-grid = [[Tile(-1, False, False, False, False) for _ in range(300)] for _ in range(300)]
+grid = [[Tile('-1', False, False, False, False) for _ in range(300)] for _ in range(300)]
 
 def has_explored_most_of_the_map() -> bool:
     # return False;
@@ -974,7 +966,7 @@ def move2():
             # NOTE:
             # print(f"All directions visited, using priority direction: {best_direction}")
             print("ALL DIRECTIONS VISITED. MOVING TO NEAREST UNVISITED TILE")
-            move_to_unvisited_tile(cx, cy)
+            move_to_nearest_unvisited_tile()
             return # FIXME: remove this
         else:
             # This shouldn't happen due to the earlier check, but just in case
@@ -1144,30 +1136,171 @@ def get_directions_to_unvisited_tile(cx, cy) -> str:
                 q.append((nx, ny, d + get_new_direction(x, y, dx, dy)))
     return path
                 
+def get_directions_to_unvisited_tile2(cx, cy) -> str:
+    
+    cx = (cx // TILE_WIDTH) + MAP_CONSTANT
+    cy = (cy // TILE_WIDTH) + MAP_CONSTANT
+    
+    # Use bfs to find the closest unvisited tile
+    visited = set()
+    queue = deque()
+    paths = {}
+    
+    start_pos = (cx, cy)
+    queue.append(start_pos)
+    visited.add(start_pos)
+    paths[start_pos] = ""
+    
+    compass_value_rounded = round(compass_value / 90) * 90
+    if compass_value_rounded > 180:
+        compass_value_rounded -= 360
+    elif compass_value_rounded < -180:
+        compass_value_rounded += 360
+    
+    while queue:
+        x, y = queue.popleft()
+        print("___________________________ X: ", x, " Y: ", y)
+        print("___________________________ PATH: ", paths[(x, y)])
+        
+        if x != cx or y != cy:
+            if 0 <= x <= max_x + 1 and 0 <= y <= max_y + 1 and grid[x][y].Type() == '-1':
+                print("___________________________ UNVISITED TILE: ", x, y)
+                return paths[(x, y)]
+        
+        # Add all valid neighbors to the queue
+        dirs = [
+            (x, y - 1, "f" if compass_value_rounded == 0 else 
+                    "r" if compass_value_rounded == 90 else
+                    "l" if compass_value_rounded == -90 else "b"),  # N
+            (x, y + 1, "b" if compass_value_rounded == 0 else 
+                    "l" if compass_value_rounded == 90 else
+                    "r" if compass_value_rounded == -90 else "f"),  # S
+            (x + 1, y, "r" if compass_value_rounded == 0 else 
+                   "b" if compass_value_rounded == 90 else
+                   "f" if compass_value_rounded == -90 else "l"),  # E
+            (x - 1, y, "l" if compass_value_rounded == 0 else 
+                   "f" if compass_value_rounded == 90 else
+                   "b" if compass_value_rounded == -90 else "r")   # W
+        ]
+        
+        for nx, ny, direction in dirs:
+            next_pos = (nx, ny)
+            if next_pos not in visited and 0 <= nx < len(grid) and 0 <= ny < len(grid[0]):
+                # Check if there's no wall in this direction
+                if ((direction == "f" and not grid[x][y].N()) or
+                    (direction == "b" and not grid[x][y].S()) or
+                    (direction == "r" and not grid[x][y].E()) or
+                    (direction == "l" and not grid[x][y].W())):
+                    
+                    queue.append(next_pos)
+                    visited.add(next_pos)
+                    paths[next_pos] = paths[(x, y)] + direction
+                    
+    return ""
 
-def move_to_unvisited_tile(cx, cy):
+def get_grid_coords(x=None, y=None) -> tuple:
+    cx, cy = current_coords() if x is None and y is None else (x, y)
+    x = round(cx / TILE_WIDTH) + MAP_CONSTANT
+    y = round(cy / TILE_WIDTH) + MAP_CONSTANT
+    return x, y
+
+def get_directions_to_unvisited_tile3() -> str:
+    global max_x, max_y, min_x, min_y, grid
+    
+    cx, cy = get_grid_coords()
+    print(":::::::::::::::::::::::::: NOW GETTING DIRECTIONS TO NEAREST UNVISITED TILE ::::::::::::::::::::::::::::::")
+    print("\tCURR COORDS: ", cx, cy)
+    
+    # Track visited nodes to avoid cycles
+    visited = set([(cx, cy)])
+    
+    q = deque()
+    q.append((cx, cy, ""))
+    
+    while q:
+        x, y, path = q.popleft()
+        
+        x -= 1
+        y -= 1
+        
+        print(f"({x}, {y}) PATH: {path}, GRID: {grid[x][y].Type()}")
+        
+        if (x != cx or y != cy) and grid[x][y].Type() == '-1':
+            print("::::::::::::: FOUND A VIABLE PATH TO AN UNVISITED TILE :::::::::::::::::")
+            print("\t\tUNVISITED TILE: ", x, y, path)
+            return path
+            
+        dirs = []
+        
+        add_to_map(*get_grid_coords(x, y), '0')
+        print(f"CURRENT GRID CELLL {x}, {y} : {grid[x][y].Type()}, {grid[x][y].N()}, {grid[x][y].S()}, {grid[x][y].E()}, {grid[x][y].W()}")
+        
+        if not grid[x][y].N():  # no wall North
+            dirs.append((x - 1, y, "f"))
+        if not grid[x][y].S():  # no wall South
+            dirs.append((x + 1, y, "b"))
+        if not grid[x][y].E():  # no wall East
+            dirs.append((x, y + 1, "r"))
+        if not grid[x][y].W():  # no wall West
+            dirs.append((x, y - 1, "l"))
+            
+        for nx, ny, d in dirs:
+            if nx < 0 or ny < 0 or nx >= max_x + 1 or ny >= max_y + 1:
+                continue
+                
+            # Skip if already visited
+            if (nx, ny) in visited:
+                continue
+                
+            # Add to visited set and queue
+            visited.add((nx, ny))
+            q.append((nx, ny, path + d))
+            print(f"Added to queue: ({nx}, {ny}) with path: {path + d}")
+        
+    print("No path to unvisited tile found!")
+    return ""
+
+def move_to_nearest_unvisited_tile():
     # get the direction to the unvisited tile
-    directions = get_directions_to_unvisited_tile(cx, cy)
+    # directions = get_directions_to_unvisited_tile2(cx, cy)
+    print("________________________ ENTERED MOVE TO NEAREST UNVISITED TILE FUNCTION __________________________")
+    directions = get_directions_to_unvisited_tile3()
     print("___________________________ DIRECTIONS: ", directions)
     
     if directions is None:
         print("No unvisited tiles found")
         return
     
+    # reset current direction
+    compass_value_rounded = round(compass_value / 90) * 90
+    if compass_value_rounded > 180:
+        compass_value_rounded -= 360
+    elif compass_value_rounded < -180:
+        compass_value_rounded += 360
+    
+    while compass_value_rounded != 0:
+        turn_90(right=False)
+        compass_value_rounded = round(compass_value / 90) * 90
+        if compass_value_rounded > 180:
+            compass_value_rounded -= 360
+        elif compass_value_rounded < -180:
+            compass_value_rounded += 360
+    
+    
     # move to the unvisited tile
     for d in directions:
         if d == "f":
-            move_one_tile()
+            move_one_tile(tile_size=8)
         elif d == "r":
             turn_90(right=True)
-            move_one_tile()
+            move_one_tile(tile_size=8)
         elif d == "l":
             turn_90(right=False)
-            move_one_tile()
+            move_one_tile(tile_size=8)
         elif d == "b":
             turn_90()
             turn_90()
-            move_one_tile()
+            move_one_tile(tile_size=8)
     
 
 
@@ -1197,9 +1330,9 @@ start = True
 def add_to_map(x, y, type):
     global grid, max_x, max_y, min_x, min_y, start
     
-    x = (x // TILE_WIDTH) + MAP_CONSTANT
-    y = (y // TILE_WIDTH) + MAP_CONSTANT
-    print(" _________ X ________________ Y ______________ : ", x, y)
+    # x = (x // TILE_WIDTH) + MAP_CONSTANT
+    # y = (y // TILE_WIDTH) + MAP_CONSTANT
+    # print(" _________ X ________________ Y ______________ : ", x, y)
     
     # update x and y
     if not start:
@@ -1254,8 +1387,6 @@ def add_to_map(x, y, type):
         
     # grid[x][y] = Tile(type, False, False, False, False)
     print("MAPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP\n\n")
-    
-   
     
 
 map = None
@@ -1345,6 +1476,7 @@ while robot.step(timestep) != -1:
 
     # whenever the robot is moving, we should get the sensor values to update the global variables
     get_all_sesnor_values()
+    add_to_map(*get_grid_coords(), '0')
     detect_victims(img_right, camera_right)
     detect_victims(img_left, camera_left)
     
@@ -1353,13 +1485,6 @@ while robot.step(timestep) != -1:
     coords_right = detect_victims(camera_right.getImage(), camera_right)
     coords_left  = detect_victims(camera_left.getImage(),   camera_left)
     
-    add_to_map(*current_coords(), '0')
-    # cx, cy = current_coords()
-    
-    # cx = (cx // TILE_WIDTH) + MAP_CONSTANT
-    # cy = (cy // TILE_WIDTH) + MAP_CONSTANT
-    
-    # print(":::::::::::::::::::::MOVED TO TILE::::::::::::::::::::::: ", cx, cy)
     move2();
     
 navigate()
