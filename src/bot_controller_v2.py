@@ -57,6 +57,8 @@ img_left = None
 
 curr_area = 1
 
+total_time_passed = 0
+
 # endregion
 
 # region sensor_data
@@ -197,7 +199,7 @@ target_color = 0
 
 curr_area = 1
 
-def color_sensor_detector_and_color() -> str:
+def get_color_sensor_color() -> str:
     global curr_area
     image = color_sensor.getImage()
 
@@ -205,66 +207,66 @@ def color_sensor_detector_and_color() -> str:
     g = color_sensor.imageGetGreen(image, 1, 0, 0)
     b = color_sensor.imageGetBlue(image, 1, 0, 0)
 
-    # Grey shades have R, G, and B values close to each other
     if abs(r - g) <= 10 and abs(g - b) <= 10 and abs(r - b) <= 10 and r>=200:
-        # print(f"Tile is normal tile: R={r}, G={g}, B={b}")
-        # Color_tile(tile_id, 0)
-        return [False,-1]
+        return 'white'
     elif abs(r - g) <= 10 and abs(g - b) <= 10 and abs(r - b) <= 10 and r<=50:
-        # print(f"Tile is black: R={r}, G={g}, B={b}")
-        # Color_tile(tile_id, 2)
-        return [False,6]
+        return 'black'
     elif r<=120 and b<=120 and g<=120:
-        # print(f"Tile is grey checkpoint: R={r}, G={g}, B={b}")
-        # Color_tile(tile_id, 4)
-        return [False,-1]
+        return 'grey'
     elif r > g and r > b and abs(g-b) <=10 and g<=80 and b<=80 and r>=200:
-        # print(f"Tile is red: R={r}, G={g}, B={b}")
-        # Color_tile(tile_id, 'r')
-        return [True,2]
+        return 'red'
     elif g > r and g > b and abs(r-b) <=10 and r<=80 and b<=80 and g>=200:
-        # print(f"Tile is green: R={r}, G={g}, B={b}")
-        # Color_tile(tile_id, 'g')
-        return [True,3]
+        return 'green'
     elif b > r and b > g and abs(r-g) <=10 and r<=80 and g<=80 and b>=200:
-        # print(f"Tile is blue: R={r}, G={g}, B={b}")
-        # Color_tile(tile_id, 'b')
-        return [True,4]
+        return 'blue'
     elif r>=100 and g<=100 and b>=100:
-        # print(f"Tile is purple: R={r}, G={g}, B={b}")
-        # Color_tile(tile_id, 'p')
-        return [True,5]
+        return 'purple'
     elif r>=200 and 200<=g<=220 and b<=100:
-        # print(f"Tile is Orange: R={r}, G={g}, B={b}")
-        # Color_tile(tile_id, 'o')
-        return [True,7]
+        return 'orange'
     elif r>=200 and g>=220 and b<=100:
-        # print(f"Tile is Yellow: R={r}, G={g}, B={b}")
-        # Color_tile(tile_id, 'y')
-        return [True,8]
+        return 'yellow'
     elif r>=100 and g>=100 and b<=100:
-        # print(f"Tile is swamp: R={r}, G={g}, B={b}")
-        # Color_tile(tile_id, 3)
-        return [False,9]
+        return 'swamp'
     else:
-        # print(f"Tile is probably a checkpoint: R={r}, G={g}, B={b}")
-        Color_tile(tile_id, 4)
-        return [False,-1]
+        return None
     
-# # area 1 
-# blue_tile = -1   # to 2
-# green_tile = -1  # to 3
-# yellow_tile = -1 # to 4
 
-# # area 2
 
+def change_area(col):
+    global curr_area
+    if curr_area == 1:
+        match col:
+            case 'blue': curr_area = 2
+            case 'yellow': curr_area = 3
+            case 'green': curr_area = 4
+            case _: curr_area = 1
+    elif curr_area == 2:
+        match col:
+            case 'blue': curr_area = 1
+            case 'purple': curr_area = 3
+            case 'orange': curr_area = 4
+            case _: curr_area = 2
+    elif curr_area == 3:
+        match col:
+            case 'yellow': curr_area = 1
+            case 'purple': curr_area = 2
+            case 'red': curr_area = 4
+            case _: curr_area = 3
+    elif curr_area == 4:
+        match col:
+            case 'green': curr_area = 1
+            case 'orange': curr_area = 2
+            case 'red': curr_area = 3
+            case _: curr_area = 4
+            
+    print("area::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: ", curr_area)
 
 # def will_go_out_of_area1():
 #     image = color.getImage()
 #     r = color.imageGetRed(image, 1, 0, 0)
 #     g = color.imageGetGreen(image, 1, 0, 0)
 #     b = color.imageGetBlue(image, 1, 0, 0)
-    print("color prinitng here",r,g,b)
+    # print("color prinitng here",r,g,b)
 #     if r==28 and g<=240 and b==28:
         # print("green")
 #         return True
@@ -350,6 +352,9 @@ start = robot.getTime()
 
 def move_one_tile(tile_size=TILE_WIDTH):
     global coords
+    
+    #if tile_size == TILE_WIDTH and curr_area != 1:
+    tile_size = TILE_WIDTH / 2
     
     compass_value_rounded_to_nearest_90 = round(compass_value / 90) * 90
 
@@ -994,21 +999,19 @@ grid = [[Tile('-1', False, False, False, False) for _ in range(300)] for _ in ra
 def has_explored_most_of_the_map() -> bool:
     # return False;
     global grid, min_x, min_y, max_x, max_y
-    return False
-    # unexplored_count = sum(1 for x in range(min_x + MAP_CONSTANT, max_x + 1) for y in range(min_y, max_y + 1) if 0 <= x + MAP_CONSTANT < len(grid) and 0 <= y + MAP_CONSTANT < len(grid[0]) and grid[x + MAP_CONSTANT][y + MAP_CONSTANT].type == -1)
-    cnt_neg_1 = 0
+    # return False
+    cnt_neg_1 =  0
+    total_cnt =  0
     for i in range(min_x, max_x + 1):
         for j in range(min_y, max_y + 1):
             cnt_neg_1 += grid[i][j].type == '-1'
-    total_cells = (abs(min_x) + max_x + 1) * (abs(min_y) + max_y + 1)
-    if total_cells == 0:
-        total_cells = 100
+            total_cnt += 1
     
-    ratio = (cnt_neg_1 / total_cells) * 100
+    ratio = (cnt_neg_1 / total_cnt) * 100
     
     print("______________________ UNEXPLORED PERCENTAGE: " + str(ratio) + "%")
     return ratio <= 10 and ratio > 0
-    
+
 
 old_x, old_y = None, None
 # Zeyad was here
@@ -1016,6 +1019,8 @@ def move2():
     global old_x, old_y, coords
     
     # FIXME: handle getting stuck
+    
+    deltatime = total_time_passed
     
     cx, cy = current_coords()
     x = (cx // TILE_WIDTH) + MAP_CONSTANT
@@ -1038,6 +1043,14 @@ def move2():
     
     # Repeat until a successful move or max attempts reached
     while attempt_count < max_attempts:
+        deltatime = total_time_passed - deltatime
+        
+        if deltatime > 1000:
+            turn_90()
+            turn_90()
+            move_one_tile(tile_size=3)
+            turn_90(right=False)
+            
         attempt_count += 1
         print(f"Movement attempt {attempt_count} of {max_attempts}")
         
@@ -1084,6 +1097,7 @@ def move2():
             move_to_nearest_unvisited_tile_dfs()
             return # FIXME: remove this
         else:
+            # move_to_nearest_unvisited_tile_dfs2()
             # This shouldn't happen due to the earlier check, but just in case
             best_direction = "turn_around"
             print("No valid directions, turning around")
@@ -1127,6 +1141,7 @@ def move2():
         turn_90()
         turn_90()
         move_one_tile(tile_size=3)
+        move_to_nearest_unvisited_tile_dfs2()
         old_x, old_y = cx, cy
         
     
@@ -1420,7 +1435,6 @@ def move_to_nearest_unvisited_tile_dfs():
             turn_90(right=False)
 
 def move_to_nearest_unvisited_tile_dfs2():
-    # Turn around at the beginning (makes sense if we're checking a new direction)
     turn_90()
     turn_90()
     
@@ -1428,7 +1442,7 @@ def move_to_nearest_unvisited_tile_dfs2():
     dfs_visited = set()
     
     # Set a maximum number of iterations to prevent infinite loops
-    max_iterations = 50
+    max_iterations = 4
     iterations = 0
     
     while iterations < max_iterations:
@@ -1522,6 +1536,149 @@ def move_to_nearest_unvisited_tile():
             turn_90()
             move_one_tile(tile_size=8)
     
+def move_to_nearest_unvisited_tile_dfs_enhanced():
+    """
+    Enhanced DFS exploration that frequently checks for better paths
+    and avoids revisiting paths taken within the same DFS.
+    """
+    # Track visited positions during this DFS search only
+    dfs_visited = set()
+    
+    # Set a maximum number of iterations to prevent infinite loops
+    max_iterations = 5
+    iterations = 0
+    
+    # Track previous directions to detect cycles
+    last_directions = []
+    
+    while iterations < max_iterations:
+        iterations += 1
+        
+        print(f"Enhanced DFS iteration {iterations}/{max_iterations}")
+        cx, cy = current_coords()
+        x = round(cx / TILE_WIDTH) + MAP_CONSTANT
+        y = round(cy / TILE_WIDTH) + MAP_CONSTANT
+        
+        # Check current position
+        current_pos = (x, y)
+        if current_pos in dfs_visited:
+            print(f"Already visited position {current_pos} during this DFS search")
+            # Choose a direction we haven't gone yet
+            if not lidar_left and ("left", current_pos) not in last_directions:
+                print("Trying left direction to avoid revisiting")
+                turn_90(right=False)
+                last_directions.append(("left", current_pos))
+            elif not lidar_right and ("right", current_pos) not in last_directions:
+                print("Trying right direction to avoid revisiting")
+                turn_90(right=True)
+                last_directions.append(("right", current_pos))
+            else:
+                print("No new directions, turning around")
+                turn_90()
+                turn_90()
+            continue
+            
+        dfs_visited.add(current_pos)
+        
+        # Check if we found an unvisited tile
+        if grid[x - 1][y - 1].type == '-1':
+            print(f"Found unvisited tile at: {current_pos}")
+            return
+        
+        # Look for optimal direction every half tile
+        # Try directions in order: front, right, left, back
+        directions = []
+        
+        if not lidar_front:
+            directions.append(("front", False))
+        if not lidar_right:
+            directions.append(("right", False))
+        if not lidar_left:
+            directions.append(("left", False))
+        if not lidar_back:
+            directions.append(("back", False))
+            
+        # If all directions blocked, force a turn and try a small backup
+        if not directions:
+            print("All directions blocked, turning around")
+            turn_90()
+            turn_90()
+            move_one_tile(tile_size=TILE_WIDTH/4)  # Tiny backup
+            continue
+        
+        # Mark which directions were already taken in this DFS
+        for i, (direction, _) in enumerate(directions):
+            next_pos = None
+            if direction == "front":
+                next_x, next_y = get_next_coords(cx, cy, "front")
+                next_pos = (round(next_x / TILE_WIDTH) + MAP_CONSTANT, 
+                           round(next_y / TILE_WIDTH) + MAP_CONSTANT)
+            elif direction == "right":
+                next_x, next_y = get_next_coords(cx, cy, "right")
+                next_pos = (round(next_x / TILE_WIDTH) + MAP_CONSTANT, 
+                           round(next_y / TILE_WIDTH) + MAP_CONSTANT)
+            elif direction == "left":
+                next_x, next_y = get_next_coords(cx, cy, "left")
+                next_pos = (round(next_x / TILE_WIDTH) + MAP_CONSTANT, 
+                           round(next_y / TILE_WIDTH) + MAP_CONSTANT)
+            elif direction == "back":
+                next_x, next_y = get_next_coords(cx, cy, "back")
+                next_pos = (round(next_x / TILE_WIDTH) + MAP_CONSTANT, 
+                           round(next_y / TILE_WIDTH) + MAP_CONSTANT)
+                
+            if next_pos in dfs_visited:
+                directions[i] = (direction, True)
+        
+        # Get unvisited directions
+        unvisited_directions = [d for d, visited in directions if not visited]
+        
+        # Choose best direction
+        if unvisited_directions:
+            best_direction = unvisited_directions[0]
+            print(f"Moving to unvisited direction: {best_direction}")
+        else:
+            # All directions visited in this DFS, choose first available
+            best_direction = directions[0][0]
+            print(f"All directions visited in this DFS, using: {best_direction}")
+        
+        # Move in chosen direction, but only half a tile
+        if best_direction == "front":
+            result = move_one_tile(tile_size=TILE_WIDTH/2)
+            last_directions.append(("front", current_pos))
+        elif best_direction == "right":
+            turn_90(right=True)
+            result = move_one_tile(tile_size=TILE_WIDTH/2)
+            last_directions.append(("right", current_pos))
+        elif best_direction == "left":
+            turn_90(right=False)
+            result = move_one_tile(tile_size=TILE_WIDTH/2)
+            last_directions.append(("left", current_pos))
+        elif best_direction == "back":
+            turn_90()
+            turn_90()
+            result = move_one_tile(tile_size=TILE_WIDTH/2)
+            last_directions.append(("back", current_pos))
+        
+        # Handle holes
+        if result == "hole":
+            print(f"Hole detected in {best_direction} direction!")
+            # Mark hole in map
+            hole_x, hole_y = get_next_coords(cx, cy, best_direction)
+            hole_grid_x = round(hole_x / TILE_WIDTH) + MAP_CONSTANT
+            hole_grid_y = round(hole_y / TILE_WIDTH) + MAP_CONSTANT
+            dfs_visited.add((hole_grid_x, hole_grid_y))
+            
+            # Turn away from hole and try again
+            turn_90()
+            turn_90()
+            move_one_tile(tile_size=TILE_WIDTH/4)  # Small backup
+        
+        # Limit the size of direction history
+        if len(last_directions) > 10:
+            last_directions = last_directions[-10:]
+    
+    print("Enhanced DFS reached maximum iterations without finding unvisited tile")
+    return
 
 tile_visit_counts = {}  # Dictionary to track visit count for each tile
 
@@ -1951,6 +2108,7 @@ def submit_map():
 
 startt = True
 while robot.step(timestep) != -1:
+    total_time_passed += timestep;
 
     # whenever the robot is moving, we should get the sensor values to update the global variables
     get_all_sesnor_values()
@@ -1958,7 +2116,17 @@ while robot.step(timestep) != -1:
         add_to_map(*get_grid_coords(), '5')
         startt = False
     else:
-        add_to_map(*get_grid_coords(), '0')
+        type = '0'
+        # add_to_map(*get_grid_coords(), '0')
+    
+        col = get_color_sensor_color()
+        if col not in ['white', 'black', 'swamp', 'grey']:
+            type = '1'
+            # TODO: map types of cells
+            change_area(col)
+        
+        # TODO: check if checkpoint, swamp, hole
+        add_to_map(*get_grid_coords(), type)
         
     detect_victims(img_right, camera_right)
     detect_victims(img_left, camera_left)
