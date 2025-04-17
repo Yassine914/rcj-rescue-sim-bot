@@ -1043,14 +1043,6 @@ def move2():
     
     # Repeat until a successful move or max attempts reached
     while attempt_count < max_attempts:
-        deltatime = total_time_passed - deltatime
-        
-        if deltatime > 1000:
-            turn_90()
-            turn_90()
-            move_one_tile(tile_size=3)
-            turn_90(right=False)
-            
         attempt_count += 1
         print(f"Movement attempt {attempt_count} of {max_attempts}")
         

@@ -60,7 +60,6 @@ curr_area = 1
 total_time_passed = 0
 
 # endregion
-
 # region sensor_data
 
 # a function to add the gps readings to the gps_readings list
@@ -220,163 +219,6 @@ def change_area(col):
     print("area::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::: ", curr_area)
 
 # endregion
-
-# region movement
-
-def turn_90(right = True):
-    # round current robot angle to the nearest multiple of 90 (0, 90, 180, -90)
-    compass_value_rounded_to_nearest_90 = round(compass_value / 90) * 90
-
-    # then add or subtract 90 to get the next angle the robot should move to
-    
-    if right: # subtract 90 if the robot should turn right
-        next_angle = compass_value_rounded_to_nearest_90 - 90
-    else: # add 90 if the robot should turn left
-        next_angle = compass_value_rounded_to_nearest_90 + 90
-
-    # to make sure that the angle is between -180 to 180
-    if next_angle > 180:
-        next_angle -= 360
-    elif next_angle < -180:
-        next_angle += 360
-
-    # see if robot should turn left or right then set the wheel velocities accordingly
-    if right:
-        s1 =-3
-        s2 = 3
-    else:
-        s1 = 3
-        s2 = -3
-
-    # start moving the robot
-    while robot.step(timestep) != -1:
-        # whenever the robot is moving, we should get the sensor values to update the global variables
-        get_all_sesnor_values()
-        detect_victims(img_right, camera_right)
-        detect_victims(img_left, camera_left)
-
-        # move the robot with the calculated wheel velocities
-        wheel1.setVelocity(s1)
-        wheel2.setVelocity(s2)
-
-        # check if robot is close to the next angle he should move to (if difference is smaller than 7)
-        if abs(compass_value - next_angle) < 7:
-            # robot is close to next angle then we should break the loop
-            break
-
-def stop(duration):
-    # we call robot.step but with wheel velocities set to 0
-    # the simulation will keep running but the robot will stop
-
-    stop = duration
-    while robot.step(timestep) != -1:
-        # keep looping until 5000ms pass then break the loop
-        wheel1.setVelocity(0)
-        wheel2.setVelocity(0)
-        stop -= timestep
-        if stop <= 0:
-            break
-
-start = robot.getTime()
-
-def move_one_tile(tile_size=TILE_WIDTH):
-    global coords
-    
-    compass_value_rounded_to_nearest_90 = round(compass_value / 90) * 90
-
-    # get the current x and y of the robot
-    x = gps_readings[0]
-    y = gps_readings[2]
-
-    # round x and y to nearest multiple of 12
-    x = round(x / tile_size) * tile_size 
-    y = round(y / tile_size) * tile_size 
-
-    # save_coords(x, y);
-    
-    # if the robot is facing horizontally (90 or -90) we should move in the x direction, so x should change and y should stay the same
-    # if the robot is facing vertically (0 or 180) we should move in the y direction, so y should change and x should stay the same
-
-    if compass_value_rounded_to_nearest_90 in (90, -90):
-        if compass_value_rounded_to_nearest_90 == 90:
-            # if the robot is facing 90, then we should move to the left, so we subtract 12 from x
-            x_new = x -  tile_size
-            y_new = y
-        else:
-            # if the robot is facing -90, then we should move to the right, so we add 12 to x
-            x_new = x + tile_size 
-            y_new = y
-
-    else:
-        # if the robot is facing 0, then we should move up, so we subtract 12 from y
-        if compass_value_rounded_to_nearest_90 == 0:
-            x_new = x
-            y_new = y - tile_size
-        else:
-            # if the robot is facing 180, then we should move down, so we add 12 to y
-            x_new = x
-            y_new = y + tile_size
-            
-    while robot.step(timestep) != -1:
-
-        # whenever the robot is moving, we should get the sensor values to update the global variables
-        get_all_sesnor_values()
-        print_info()
-        detect_victims(img_right, camera_right)
-        detect_victims(img_left, camera_left)
-
-        # calculate the angle difference between the robot's current angle and the angle he should move to
-        # To see if the robot is inclined to the right or left
-        angle_difference = compass_value_rounded_to_nearest_90 - compass_value
-
-        # we should make sure that the angle difference is between -180 to 180
-        if angle_difference > 180:
-            angle_difference -= 360
-        elif angle_difference < -180:
-            angle_difference += 360
-
-        # in order to make sure the robot is moving straight,we should prevent the robot from inclining to the right or left
-        # if the robot is inclined to the right, we should make the robot move slightly to the left
-        if angle_difference > 0:
-            s1 = 6.28
-            s2 = 4
-        else:
-            # if the robot is inclined to the left, we should make the robot move slightly to the right
-            s1 = 4
-            s2 = 6.28
-
-        # start moving the robot with the calculated wheel velocities
-        wheel1.setVelocity(s1)
-        wheel2.setVelocity(s2)
-
-
-        # the robot stops moving in 3 cases:
-        # 1. the robot sees an object in front of him
-        # 2. the robot reaches the new x coordinate (if he is moving horizontally) or the new y coordinate (if he is moving vertically)
-        # 3. there is a hole infront of the robot (we check the colour sensor to see if it is black)
-
-        # if the robot sees an object in front of him, we break the loop, then the function will end
-        if lidar_front:
-            break
-        
-        # we look at the current robot position and the new position he should move to (if the difference is smaller than 1, then the robot reached the new position)
-        # if the robot is moving horizontally, we should check if the robot reached the new x coordinate
-
-        if compass_value_rounded_to_nearest_90 in (90, -90):
-            if x_new - 1 < gps_readings[0] < x_new + 1:
-                break
-        else :
-            # if the robot is moving vertically, we should check if the robot reached the new y coordinate
-            if y_new - 1 < gps_readings[2] < y_new + 1:
-                break
-            
-        # return "hole" if color sensor reads black
-        if color_sensor_values[0] < BLACK_THRESHOLD and color_sensor_values[1] < BLACK_THRESHOLD and color_sensor_values[2] < BLACK_THRESHOLD:
-            add_to_map(*get_grid_coords(), '2')
-            return "hole"
-
-# endregion
-
 # region detect_signs
 def should_scan():
     # check if the robot has scanned the sign before
@@ -815,9 +657,7 @@ def detect_letters3(sign) -> str:
     return letter_type
 
 # endregion
-
-# region movement_2
-
+# region movement
 def print_info():
     return
     print("---------------------------------")
@@ -825,13 +665,165 @@ def print_info():
     print(f"gps readings:  {gps_readings}")
     print(f"Color sensor values:  {color_sensor_values}")
     print("---------------------------------")
+    
+    
+def turn_90(right = True):
+    # round current robot angle to the nearest multiple of 90 (0, 90, 180, -90)
+    compass_value_rounded_to_nearest_90 = round(compass_value / 90) * 90
+
+    # then add or subtract 90 to get the next angle the robot should move to
+    
+    if right: # subtract 90 if the robot should turn right
+        next_angle = compass_value_rounded_to_nearest_90 - 90
+    else: # add 90 if the robot should turn left
+        next_angle = compass_value_rounded_to_nearest_90 + 90
+
+    # to make sure that the angle is between -180 to 180
+    if next_angle > 180:
+        next_angle -= 360
+    elif next_angle < -180:
+        next_angle += 360
+
+    # see if robot should turn left or right then set the wheel velocities accordingly
+    if right:
+        s1 =-3
+        s2 = 3
+    else:
+        s1 = 3
+        s2 = -3
+
+    # start moving the robot
+    while robot.step(timestep) != -1:
+        # whenever the robot is moving, we should get the sensor values to update the global variables
+        get_all_sesnor_values()
+        detect_victims(img_right, camera_right)
+        detect_victims(img_left, camera_left)
+
+        # move the robot with the calculated wheel velocities
+        wheel1.setVelocity(s1)
+        wheel2.setVelocity(s2)
+
+        # check if robot is close to the next angle he should move to (if difference is smaller than 7)
+        if abs(compass_value - next_angle) < 7:
+            # robot is close to next angle then we should break the loop
+            break
+
+def stop(duration):
+    # we call robot.step but with wheel velocities set to 0
+    # the simulation will keep running but the robot will stop
+
+    stop = duration
+    while robot.step(timestep) != -1:
+        # keep looping until 5000ms pass then break the loop
+        wheel1.setVelocity(0)
+        wheel2.setVelocity(0)
+        stop -= timestep
+        if stop <= 0:
+            break
+
+start = robot.getTime()
+
+def move_one_tile(tile_size=TILE_WIDTH):
+    global coords
+    
+    compass_value_rounded_to_nearest_90 = round(compass_value / 90) * 90
+
+    # get the current x and y of the robot
+    x = gps_readings[0]
+    y = gps_readings[2]
+
+    # round x and y to nearest multiple of 12
+    x = round(x / tile_size) * tile_size 
+    y = round(y / tile_size) * tile_size 
+
+    # save_coords(x, y);
+    
+    # if the robot is facing horizontally (90 or -90) we should move in the x direction, so x should change and y should stay the same
+    # if the robot is facing vertically (0 or 180) we should move in the y direction, so y should change and x should stay the same
+
+    if compass_value_rounded_to_nearest_90 in (90, -90):
+        if compass_value_rounded_to_nearest_90 == 90:
+            # if the robot is facing 90, then we should move to the left, so we subtract 12 from x
+            x_new = x -  tile_size
+            y_new = y
+        else:
+            # if the robot is facing -90, then we should move to the right, so we add 12 to x
+            x_new = x + tile_size 
+            y_new = y
+
+    else:
+        # if the robot is facing 0, then we should move up, so we subtract 12 from y
+        if compass_value_rounded_to_nearest_90 == 0:
+            x_new = x
+            y_new = y - tile_size
+        else:
+            # if the robot is facing 180, then we should move down, so we add 12 to y
+            x_new = x
+            y_new = y + tile_size
+            
+    while robot.step(timestep) != -1:
+
+        # whenever the robot is moving, we should get the sensor values to update the global variables
+        get_all_sesnor_values()
+        print_info()
+        detect_victims(img_right, camera_right)
+        detect_victims(img_left, camera_left)
+
+        # calculate the angle difference between the robot's current angle and the angle he should move to
+        # To see if the robot is inclined to the right or left
+        angle_difference = compass_value_rounded_to_nearest_90 - compass_value
+
+        # we should make sure that the angle difference is between -180 to 180
+        if angle_difference > 180:
+            angle_difference -= 360
+        elif angle_difference < -180:
+            angle_difference += 360
+
+        # in order to make sure the robot is moving straight,we should prevent the robot from inclining to the right or left
+        # if the robot is inclined to the right, we should make the robot move slightly to the left
+        if angle_difference > 0:
+            s1 = 6.28
+            s2 = 4
+        else:
+            # if the robot is inclined to the left, we should make the robot move slightly to the right
+            s1 = 4
+            s2 = 6.28
+
+        # start moving the robot with the calculated wheel velocities
+        wheel1.setVelocity(s1)
+        wheel2.setVelocity(s2)
+
+
+        # the robot stops moving in 3 cases:
+        # 1. the robot sees an object in front of him
+        # 2. the robot reaches the new x coordinate (if he is moving horizontally) or the new y coordinate (if he is moving vertically)
+        # 3. there is a hole infront of the robot (we check the colour sensor to see if it is black)
+
+        # if the robot sees an object in front of him, we break the loop, then the function will end
+        if lidar_front:
+            break
+        
+        # we look at the current robot position and the new position he should move to (if the difference is smaller than 1, then the robot reached the new position)
+        # if the robot is moving horizontally, we should check if the robot reached the new x coordinate
+
+        if compass_value_rounded_to_nearest_90 in (90, -90):
+            if x_new - 1 < gps_readings[0] < x_new + 1:
+                break
+        else :
+            # if the robot is moving vertically, we should check if the robot reached the new y coordinate
+            if y_new - 1 < gps_readings[2] < y_new + 1:
+                break
+            
+        # return "hole" if color sensor reads black
+        if color_sensor_values[0] < BLACK_THRESHOLD and color_sensor_values[1] < BLACK_THRESHOLD and color_sensor_values[2] < BLACK_THRESHOLD:
+            add_to_map(*get_grid_coords(), '2')
+            return "hole"
 
 coords = set()
-
 def current_coords():
     get_gps_readings()
     # return the current coordinates of the robot
-    # FIXME: each tile is now 4 * (6cm * 6cm)
+    # NOTE: each tile is now 4 * (6cm * 6cm)
     x = round(gps_readings[0] / TILE_WIDTH) * TILE_WIDTH
     y = round(gps_readings[2] / TILE_WIDTH) * TILE_WIDTH
     return x, y
@@ -936,8 +928,141 @@ def has_explored_most_of_the_map() -> bool:
     return ratio <= 10 and ratio > 0
 
 
-# NEW MOVE FUNCTION
+def nav_to_nearest_unvisited_tile():
+    print("found the robot stuck in a loop")
+    print("\tattempting to navigate to the nearest unvisited tile")
+    
+    
+    
+    return
 
+def move_old():
+    global coords
+    
+    # FIXME: handle getting stuck
+    
+    cx, cy = current_coords()
+    current_visited = has_already_passed_current_tile()
+    
+    # Save the current coordinates as visited if not already visited
+    if not current_visited:
+        save_coords(cx, cy)
+        
+        # TODO: get color from color sensor
+        
+        print(f"-----------------------------------saving new tile: ({cx}, {cy})")
+    
+    # Track attempt count to prevent infinite loops
+    attempt_count = 0
+    max_attempts = 4  # Maximum number of attempts before forcing a move
+    
+    # Repeat until a successful move or max attempts reached
+    while attempt_count < max_attempts:
+        attempt_count += 1
+        print(f"Movement attempt {attempt_count} of {max_attempts}")
+        
+        # Create a priority list of possible movement directions
+        directions = []
+        
+        # Check which directions are free and add them to the priority list
+        if not lidar_right:
+            directions.append(("right", False))
+        if not lidar_front:
+            directions.append(("front", False))
+        if not lidar_left:
+            directions.append(("left", False))
+        # if not lidar_back:
+            # directions.append(("back", False))
+        
+        # If no directions available (surrounded by walls), force a turn
+        if not directions:
+            print("All directions blocked by walls, turning around")
+            turn_90(right=False)
+            # turn_90()
+            move_one_tile()
+            return
+        
+        # Mark which directions lead to visited tiles
+        for i, (direction, _) in enumerate(directions):
+            next_x, next_y = get_next_coords(cx, cy, direction)
+            for visited_x, visited_y in coords:
+                if math.sqrt(math.pow(next_x - visited_x, 2) + math.pow(next_y - visited_y, 2)) < TILE_WIDTH / 2:
+                    directions[i] = (direction, True)
+                    break
+        
+        # Find the best direction to move
+        unvisited_directions = [d for d, visited in directions if not visited]
+        
+        if unvisited_directions:
+            best_direction = unvisited_directions[0]
+            print(f"Moving to unvisited direction: {best_direction}")
+        elif directions:
+            # best_direction = directions[0][0];
+            # NOTE:
+            # print(f"All directions visited, using priority direction: {best_direction}")
+            print("ALL DIRECTIONS VISITED. MOVING TO NEAREST UNVISITED TILE")
+            # move_to_nearest_unvisited_tile_dfs()
+            nav_to_nearest_unvisited_tile()           
+            return # FIXME: remove this
+        else:
+            # move_to_nearest_unvisited_tile_dfs2()
+            # This shouldn't happen due to the earlier check, but just in case
+            best_direction = "turn_around"
+            print("No valid directions, turning around")
+        
+        # Execute the movement
+        result = None
+        if best_direction == "right":
+            turn_90(right=True)
+            result = move_one_tile()
+        elif best_direction == "front":
+            result = move_one_tile()
+        elif best_direction == "left":
+            turn_90(right=False)
+            result = move_one_tile()
+        elif best_direction == "back" or best_direction == "turn_around":
+            turn_90()
+            turn_90()
+            result = move_one_tile()
+            # turn_90()
+            # turn_90()
+        
+        
+        if has_explored_most_of_the_map():
+            print("- - - - - - - - - - - we have explored most of the map - - - - - -  - - - - ")
+            create_new_map()
+            submit_map()
+        
+        # If successful move or max attempts reached, exit the loop
+        if result != "hole":
+            return
+        
+        stop(1000)
+        
+        # If hole detected, mark this direction as invalid and try again
+        print(f"Hole detected in {best_direction} direction! Trying a different direction.")
+        
+        # Mark the coordinates where the hole was detected to avoid going there again
+        hole_x, hole_y = get_next_coords(cx, cy, best_direction)
+        save_coords(hole_x, hole_y)
+        
+        # Turn away from the hole and continue the loop to find a new direction
+        turn_90()
+        turn_90()
+        move_one_tile(tile_size=3)
+        # move_to_nearest_unvisited_tile_dfs2()
+        old_x, old_y = cx, cy
+        
+    
+    # If we've tried all directions and still can't move, perform a random turn
+    print("Maximum movement attempts reached. Performing random turn.")
+    if random.choice([True, False]):
+        turn_90()
+    else:
+        turn_90(right=False)
+
+
+# NEW MOVE FUNCTION
 def move_final():
     global min_x, min_y, max_x, max_y, grid
     
@@ -1091,11 +1216,13 @@ def add_to_map(x, y, type):
     # FIXME: check why it works as x - 1, y - 1
     if grid[x][y].type == '-1':
         grid[x][y] = Tile(type, n, s, e, w)
-   
+        
+    print(f"grid[{x}][{y}] = {grid[x][y].type}, {grid[x][y].N()}, {grid[x][y].S()}, {grid[x][y].E()}, {grid[x][y].W()}")
+    
     # print map
     print("---map start---\n\n")
-    for i in range(min_y, max_y):
-        for j in range(min_x, max_x):
+    for i in range(min_y - 1, max_y + 2):
+        for j in range(min_x - 1, max_x + 2):
             print(grid[j][i].Type(), end=' ')
         print()
         
@@ -1149,8 +1276,8 @@ def create_new_map():
         m += 4
             
     # print the map
-    for i in range(min_x, max_x + 1):
-        for j in range(min_y, max_y + 1):
+    for i in range(min_x, max_x + 2):
+        for j in range(min_y, max_y + 2):
             print(grid[i][j].Type(), end=' ')
         print()
     
@@ -1214,8 +1341,8 @@ while robot.step(timestep) != -1:
     coords_right = detect_victims(camera_right.getImage(), camera_right)
     coords_left  = detect_victims(camera_left.getImage(),   camera_left)
     
-    move_final();
-    stop(500)
+    # move_final();
+    move_old();
     pass
 
 # endregion
