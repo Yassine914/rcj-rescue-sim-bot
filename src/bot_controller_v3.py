@@ -14,15 +14,16 @@ BLACK_THRESHOLD = 60 # The threshold for the black color in the image (holes)
 
 timestep = 32
 max_velocity = 6.28
+velocity = max_velocity
 robot = Robot()
 
 # Define the wheels 
-wheel1 = robot.getDevice("wheel1 motor")   # Create an object to control the left wheel
-wheel2 = robot.getDevice("wheel2 motor") # Create an object to control the right wheel
+right_wheel = robot.getDevice("wheel1 motor")   # Create an object to control the left wheel
+left_wheel = robot.getDevice("wheel2 motor") # Create an object to control the right wheel
 
 # Set the wheels to have infinite rotation 
-wheel1.setPosition(float("inf"))       
-wheel2.setPosition(float("inf"))
+right_wheel.setPosition(float("inf"))       
+left_wheel.setPosition(float("inf"))
 
 # initialise the sensors
 gps = robot.getDevice("gps")
@@ -220,6 +221,11 @@ def change_area(col):
 
 # endregion
 # region detect_signs
+def scan_for_signs():
+    x = detect_victims(camera_right.getImage(), camera_right)
+    y = detect_victims(camera_left.getImage(),   camera_left)
+    return x, y
+
 def should_scan():
     # check if the robot has scanned the sign before
     # loop the scanned signs check for a near colunms
@@ -700,23 +706,28 @@ def turn_90(right = True):
         detect_victims(img_left, camera_left)
 
         # move the robot with the calculated wheel velocities
-        wheel1.setVelocity(s1)
-        wheel2.setVelocity(s2)
+        right_wheel.setVelocity(s1)
+        left_wheel.setVelocity(s2)
 
         # check if robot is close to the next angle he should move to (if difference is smaller than 7)
         if abs(compass_value - next_angle) < 7:
             # robot is close to next angle then we should break the loop
             break
 
-def stop(duration):
+def stop(duration = 0):
     # we call robot.step but with wheel velocities set to 0
     # the simulation will keep running but the robot will stop
+    
+    if duration == 0:
+        right_wheel.setVelocity(0)
+        left_wheel.setVelocity(0)
+        return
 
     stop = duration
     while robot.step(timestep) != -1:
         # keep looping until 5000ms pass then break the loop
-        wheel1.setVelocity(0)
-        wheel2.setVelocity(0)
+        right_wheel.setVelocity(0)
+        left_wheel.setVelocity(0)
         stop -= timestep
         if stop <= 0:
             break
@@ -725,6 +736,8 @@ start = robot.getTime()
 
 def move_one_tile(tile_size=TILE_WIDTH):
     global coords
+    
+    scan_for_signs()
     
     compass_value_rounded_to_nearest_90 = round(compass_value / 90) * 90
 
@@ -762,7 +775,10 @@ def move_one_tile(tile_size=TILE_WIDTH):
             y_new = y + tile_size
             
     while robot.step(timestep) != -1:
-
+        
+        if stuck():
+            return "stuck"
+        
         # whenever the robot is moving, we should get the sensor values to update the global variables
         get_all_sesnor_values()
         print_info()
@@ -790,14 +806,17 @@ def move_one_tile(tile_size=TILE_WIDTH):
             s2 = 6.28
 
         # start moving the robot with the calculated wheel velocities
-        wheel1.setVelocity(s1)
-        wheel2.setVelocity(s2)
+        right_wheel.setVelocity(s1)
+        left_wheel.setVelocity(s2)
 
 
         # the robot stops moving in 3 cases:
         # 1. the robot sees an object in front of him
         # 2. the robot reaches the new x coordinate (if he is moving horizontally) or the new y coordinate (if he is moving vertically)
         # 3. there is a hole infront of the robot (we check the colour sensor to see if it is black)
+        
+        # FIXME: make sure the robot goes back to normal nav mode
+
 
         # if the robot sees an object in front of him, we break the loop, then the function will end
         if lidar_front:
@@ -816,7 +835,97 @@ def move_one_tile(tile_size=TILE_WIDTH):
             
         # return "hole" if color sensor reads black
         if color_sensor_values[0] < BLACK_THRESHOLD and color_sensor_values[1] < BLACK_THRESHOLD and color_sensor_values[2] < BLACK_THRESHOLD:
-            add_to_map(*get_grid_coords(), '2')
+            add_to_map(*get_grid_coords(), '2', full_tile=True)
+            return "hole"
+
+def move_one_tile_backwards(tile_size=TILE_WIDTH):
+    global coords
+    
+    scan_for_signs()
+    
+    compass_value_rounded_to_nearest_90 = round(compass_value / 90) * 90
+
+    # get the current x and y of the robot
+    x = gps_readings[0]
+    y = gps_readings[2]
+
+    # round x and y to nearest multiple of 12
+    x = round(x / tile_size) * tile_size 
+    y = round(y / tile_size) * tile_size 
+
+    # save_coords(x, y);
+    
+    # if the robot is facing horizontally (90 or -90) we should move in the x direction, so x should change and y should stay the same
+    # if the robot is facing vertically (0 or 180) we should move in the y direction, so y should change and x should stay the same
+
+    if compass_value_rounded_to_nearest_90 in (90, -90):
+        if compass_value_rounded_to_nearest_90 == 90:
+            # if the robot is facing 90, then we should move to the left, so we subtract 12 from x
+            x_new = x + tile_size
+            y_new = y
+        else:
+            # if the robot is facing -90, then we should move to the right, so we add 12 to x
+            x_new = x - tile_size 
+            y_new = y
+
+    else:
+        # if the robot is facing 0, then we should move up, so we subtract 12 from y
+        if compass_value_rounded_to_nearest_90 == 0:
+            x_new = x
+            y_new = y + tile_size
+        else:
+            # if the robot is facing 180, then we should move down, so we add 12 to y
+            x_new = x
+            y_new = y - tile_size
+            
+    while robot.step(timestep) != -1:
+
+        # whenever the robot is moving, we should get the sensor values to update the global variables
+        get_all_sesnor_values()
+        print_info()
+        detect_victims(img_right, camera_right)
+        detect_victims(img_left, camera_left)
+
+        # calculate the angle difference between the robot's current angle and the angle he should move to
+        # To see if the robot is inclined to the right or left
+        angle_difference = compass_value_rounded_to_nearest_90 - compass_value
+
+        # we should make sure that the angle difference is between -180 to 180
+        if angle_difference > 180:
+            angle_difference -= 360
+        elif angle_difference < -180:
+            angle_difference += 360
+
+        # in order to make sure the robot is moving straight,we should prevent the robot from inclining to the right or left
+        # if the robot is inclined to the right, we should make the robot move slightly to the left
+        if angle_difference > 0:
+            s1 = -6.28
+            s2 = -4
+        else:
+            # if the robot is inclined to the left, we should make the robot move slightly to the right
+            s1 = -4
+            s2 = -6.28
+
+        # start moving the robot with the calculated wheel velocities
+        right_wheel.setVelocity(s1)
+        left_wheel.setVelocity(s2)
+       
+        if stuck():
+            break
+
+        # if the robot sees an object in front of him, we break the loop, then the function will end
+        if lidar_front:
+            break
+        
+        if compass_value_rounded_to_nearest_90 in (90, -90):
+            if x_new - 1 < gps_readings[0] < x_new + 1:
+                break
+        else :
+            if y_new - 1 < gps_readings[2] < y_new + 1:
+                break
+            
+        if color_sensor_values[0] < BLACK_THRESHOLD and color_sensor_values[1] < BLACK_THRESHOLD and color_sensor_values[2] < BLACK_THRESHOLD:
+            add_to_map(*get_grid_coords(), '2', full_tile=True)
             return "hole"
 
 coords = set()
@@ -908,8 +1017,10 @@ class Tile:
     
     def Type(self):
         return self.type
- 
-grid = [[Tile('-1', False, False, False, False) for _ in range(500)] for _ in range(500)]
+
+
+MAX_GRID_SIZE = 500 
+grid = [[Tile('-1', False, False, False, False) for _ in range(MAX_GRID_SIZE)] for _ in range(MAX_GRID_SIZE)]
 
 def has_explored_most_of_the_map() -> bool:
     # return False;
@@ -927,14 +1038,256 @@ def has_explored_most_of_the_map() -> bool:
     print("______________________ UNEXPLORED PERCENTAGE: " + str(ratio) + "%")
     return ratio <= 10 and ratio > 0
 
+def move_forward():
+    right_wheel.setVelocity(velocity)
+    left_wheel.setVelocity(velocity)
+
+def move_backward():
+    right_wheel.setVelocity(-velocity)
+    left_wheel.setVelocity(-velocity)
+
+def move_to_previous_tile():
+    print("started moving to previous tile")
+    move_one_tile_backwards(tile_size=3)
+
+    return
+
+def stuck():
+    get_lidar_values()
+    
+    f = True
+    for i in range(0, 512):
+        f &= (lidar_values[2][i]>4.1)
+
+    if f == False:
+        
+        # stop()
+        # move_to_previous_tile()
+        move_one_tile_backwards(tile_size=3)
+        
+        add_to_map(*get_next_grid_coords(), '1', full_tile=True)
+        
+        return True
+    
+    return False
+
+
+def get_current_tile_type():
+    # TODO: get the tile type from the color sensor
+    pass
 
 def nav_to_nearest_unvisited_tile():
-    print("found the robot stuck in a loop")
-    print("\tattempting to navigate to the nearest unvisited tile")
+    print("Robot may be stuck in a loop - searching for nearest unvisited tile...")
     
+    # Get current grid position
+    cx, cy = get_grid_coords()
+    print(f"current grid position: ({cx}, {cy})")
     
+    # queue for bfs and visited set to avoid cycles
+    queue = deque([(cx, cy, [])])
+    visited = set([(cx, cy)])
     
-    return
+    cells_checked = 0
+    max_cells = 1000 # limit to avoid infinite loops TODO: adjust this value
+    
+    # BFS to find closest unvisited tile
+    while queue and cells_checked < max_cells:
+        x, y, path = queue.popleft()
+        cells_checked += 1
+        
+        # Check if current cell is unvisited
+        if grid[x][y].type == '-1':
+            print(f"Found unvisited tile at ({x}, {y}) after checking {cells_checked} cells")
+            print(f"Path directions: {path}")
+            
+            # Execute the path
+            return execute_path_to_target(path)
+        
+        # Check neighboring cells with consistency checks
+        # North (both cells agree there's no wall)
+        if not grid[x][y].N() and y > min_y and not grid[x][y-1].S():
+            if (x, y-1) not in visited:
+                visited.add((x, y-1))
+                queue.append((x, y-1, path + ['north']))
+            
+        # South (both cells agree there's no wall)
+        if not grid[x][y].S() and y < max_y and not grid[x][y+1].N():
+            if (x, y+1) not in visited:
+                visited.add((x, y+1))
+                queue.append((x, y+1, path + ['south']))
+            
+        # East (both cells agree there's no wall)
+        if not grid[x][y].E() and x < max_x and not grid[x+1][y].W():
+            if (x+1, y) not in visited:
+                visited.add((x+1, y))
+                queue.append((x+1, y, path + ['east']))
+            
+        # West (both cells agree there's no wall)
+        if not grid[x][y].W() and x > min_x and not grid[x-1][y].E():
+            if (x-1, y) not in visited:
+                visited.add((x-1, y))
+                queue.append((x-1, y, path + ['west']))
+    
+    print(f"No unvisited tiles found after checking {cells_checked} cells")
+    
+    # If we can't find any unvisited tile, try looking for the least visited tile
+    return nav_to_least_visited_tile()
+
+def execute_path_to_target(path):
+    if not path:
+        print("no path to target")
+        return False
+    
+    print(f"executing path: {path}")
+    
+    current_dir = get_compass_rounded()
+    compass_dir_map = {
+        0: 'north',
+        90: 'west',
+        -90: 'east',
+        180: 'south',
+        -180: 'south'
+    }
+    
+    current_orientation = compass_dir_map[current_dir]
+    print(f"starting orientation: {current_orientation}")
+    
+    for target_dir in path:
+        # Calculate turns needed to face target direction
+        turns_needed = calculate_turns(current_orientation, target_dir)
+        
+        # Execute the turns
+        for turn_right in turns_needed:
+            turn_90(right=turn_right)
+            current_orientation = get_direction_after_turn(current_orientation, turn_right)
+        
+        print(f"now facing {current_orientation}, moving forward")
+        
+        result = move_one_tile()
+        
+        # Check color and update map TODO: handle color sensor values
+        col = get_color_sensor_color()
+        if col not in ['white', 'black', 'swamp', 'grey']:
+            type = '1'
+            change_area(col)
+        else:
+            type = '0'
+            
+        cx, cy = get_grid_coords()
+        add_to_map(cx, cy, type)
+        
+        # Handle holes
+        if result == "hole":
+            print("encountered a hole! Recalculating path...")
+            move_to_previous_tile()
+            add_to_map(cx, cy, '2')  # '2' represents a hole
+            return nav_to_nearest_unvisited_tile()  # Recalculate path
+    
+    print("successfully reached target tile")
+    return True
+
+def calculate_turns(current, target):
+    direction_map = {'north': 0, 'east': 1, 'south': 2, 'west': 3}
+    
+    current_val = direction_map[current]
+    target_val = direction_map[target]
+    
+    # Calculate difference (0 to 3 steps)
+    diff = (target_val - current_val) % 4
+    
+    # Choose the shorter path (clockwise or counterclockwise)
+    if diff <= 2:
+        # Clockwise turns (right turns)
+        return [True] * diff
+    else:
+        # Counterclockwise turns (left turns)
+        return [False] * (4 - diff)
+
+def get_direction_after_turn(current, turn_right):
+    direction_cycle = ['north', 'east', 'south', 'west']
+    current_index = direction_cycle.index(current)
+    
+    if turn_right:
+        return direction_cycle[(current_index + 1) % 4]
+    else:
+        return direction_cycle[(current_index - 1) % 4]
+
+def nav_to_least_visited_tile():
+    print("no unvisited tiles found - navigating to least visited tile...")
+    
+    # Get current grid position
+    cx, cy = get_grid_coords()
+    print(f"current grid position: ({cx}, {cy})")
+    
+    # Priority queue for BFS - (visit_count, x, y, path)
+    from heapq import heappush, heappop
+    
+    # Initialize with current position
+    priority_queue = [(0, cx, cy, [])]
+    visited = set([(cx, cy)])
+    
+    # Track exploration stats
+    cells_checked = 0
+    max_cells = 2000  # Safety limit
+    
+    while priority_queue and cells_checked < max_cells:
+        # Get tile with lowest visit count
+        _, x, y, path = heappop(priority_queue)
+        cells_checked += 1
+        
+        # Get coordinates in real space
+        real_x, real_y = (x - MAP_CONSTANT) * TILE_WIDTH, (y - MAP_CONSTANT) * TILE_WIDTH
+        
+        # Get visit count from our tracking dictionary
+        visit_count = tile_visit_counts.get((real_x, real_y), 0)
+        
+        # Check if this is a valid destination (less visited than current position)
+        current_real_x, current_real_y = (cx - MAP_CONSTANT) * TILE_WIDTH, (cy - MAP_CONSTANT) * TILE_WIDTH
+        current_visit_count = tile_visit_counts.get((current_real_x, current_real_y), 0)
+        
+        if visit_count < current_visit_count and grid[x][y].type != '2':  # Not a hole
+            print(f"Found less-visited tile at ({x}, {y}) - visit count: {visit_count} vs current: {current_visit_count}")
+            print(f"Path directions: {path}")
+            return execute_path_to_target(path)
+        
+        # Check neighboring cells
+        # North (both cells agree there's no wall)
+        if not grid[x][y].N() and y > min_y and not grid[x][y-1].S():
+            if (x, y-1) not in visited:
+                visited.add((x, y-1))
+                real_nx, real_ny = (x - MAP_CONSTANT) * TILE_WIDTH, ((y-1) - MAP_CONSTANT) * TILE_WIDTH
+                next_visit_count = tile_visit_counts.get((real_nx, real_ny), 0)
+                heappush(priority_queue, (next_visit_count, x, y-1, path + ['north']))
+        
+        # South (both cells agree there's no wall)
+        if not grid[x][y].S() and y < max_y and not grid[x][y+1].N():
+            if (x, y+1) not in visited:
+                visited.add((x, y+1))
+                real_nx, real_ny = (x - MAP_CONSTANT) * TILE_WIDTH, ((y+1) - MAP_CONSTANT) * TILE_WIDTH
+                next_visit_count = tile_visit_counts.get((real_nx, real_ny), 0)
+                heappush(priority_queue, (next_visit_count, x, y+1, path + ['south']))
+        
+        # East (both cells agree there's no wall)
+        if not grid[x][y].E() and x < max_x and not grid[x+1][y].W():
+            if (x+1, y) not in visited:
+                visited.add((x+1, y))
+                real_nx, real_ny = ((x+1) - MAP_CONSTANT) * TILE_WIDTH, (y - MAP_CONSTANT) * TILE_WIDTH
+                next_visit_count = tile_visit_counts.get((real_nx, real_ny), 0)
+                heappush(priority_queue, (next_visit_count, x+1, y, path + ['east']))
+        
+        # West (both cells agree there's no wall)
+        if not grid[x][y].W() and x > min_x and not grid[x-1][y].E():
+            if (x-1, y) not in visited:
+                visited.add((x-1, y))
+                real_nx, real_ny = ((x-1) - MAP_CONSTANT) * TILE_WIDTH, (y - MAP_CONSTANT) * TILE_WIDTH
+                next_visit_count = tile_visit_counts.get((real_nx, real_ny), 0)
+                heappush(priority_queue, (next_visit_count, x-1, y, path + ['west']))
+    
+    print("navigation failed - couldn't find a better tile to visit")
+    
+    turn_90(right=random.choice([True, False]))
+    move_one_tile()
+    return False
 
 def move_old():
     global coords
@@ -976,10 +1329,11 @@ def move_old():
         
         # If no directions available (surrounded by walls), force a turn
         if not directions:
-            print("All directions blocked by walls, turning around")
-            turn_90(right=False)
+            nav_to_nearest_unvisited_tile()
+            # print("All directions blocked by walls, turning around")
+            # turn_90(right=False)
             # turn_90()
-            move_one_tile()
+            # move_one_tile()
             return
         
         # Mark which directions lead to visited tiles
@@ -997,16 +1351,10 @@ def move_old():
             best_direction = unvisited_directions[0]
             print(f"Moving to unvisited direction: {best_direction}")
         elif directions:
-            # best_direction = directions[0][0];
-            # NOTE:
-            # print(f"All directions visited, using priority direction: {best_direction}")
             print("ALL DIRECTIONS VISITED. MOVING TO NEAREST UNVISITED TILE")
-            # move_to_nearest_unvisited_tile_dfs()
             nav_to_nearest_unvisited_tile()           
-            return # FIXME: remove this
+            return
         else:
-            # move_to_nearest_unvisited_tile_dfs2()
-            # This shouldn't happen due to the earlier check, but just in case
             best_direction = "turn_around"
             print("No valid directions, turning around")
         
@@ -1034,10 +1382,14 @@ def move_old():
             submit_map()
         
         # If successful move or max attempts reached, exit the loop
-        if result != "hole":
+        if result != "hole" and result != "stuck":
             return
         
-        stop(1000)
+        stop(300)
+        
+        if stuck():
+            print("stuck")
+            return
         
         # If hole detected, mark this direction as invalid and try again
         print(f"Hole detected in {best_direction} direction! Trying a different direction.")
@@ -1050,8 +1402,6 @@ def move_old():
         turn_90()
         turn_90()
         move_one_tile(tile_size=3)
-        # move_to_nearest_unvisited_tile_dfs2()
-        old_x, old_y = cx, cy
         
     
     # If we've tried all directions and still can't move, perform a random turn
@@ -1130,6 +1480,19 @@ def get_grid_coords(x=None, y=None) -> tuple:
     y = round(cy / TILE_WIDTH) + MAP_CONSTANT
     return x, y
 
+def get_next_grid_coords(x=None, y=None) -> tuple:
+    cx, cy = get_grid_coords(x, y)
+    compass_value_rounded = get_compass_rounded()
+    
+    if compass_value_rounded == 0:
+        return cx, cy - 1
+    elif compass_value_rounded == 90:
+        return cx - 1, cy
+    elif compass_value_rounded == -90:
+        return cx + 1, cy
+    else:
+        return cx, cy + 1
+
 tile_visit_counts = {} # save visit count per cell
 def save_coords(x, y):
     global coords, tile_visit_counts
@@ -1188,7 +1551,7 @@ def get_global_walls() -> tuple:
     # ret   n  s  e  w
     return (f, b, r, l)
 
-def add_to_map(x, y, type):
+def add_to_map(x, y, type, full_tile=False):
     global grid, max_x, max_y, min_x, min_y, start
     
     # update x and y
@@ -1213,9 +1576,25 @@ def add_to_map(x, y, type):
     n, s, e, w = get_global_walls()
     print(f"\twalls: north: {n}, south: {s}, east: {e}, west: {w}")
     
-    # FIXME: check why it works as x - 1, y - 1
-    if grid[x][y].type == '-1':
-        grid[x][y] = Tile(type, n, s, e, w)
+    # TODO: for normal tiles: make sure we check for the entire range of the ladar
+    
+    if full_tile:
+        # add full tile
+        if grid[x][y].type == '-1':
+            grid[x][y] = Tile(type, n, False, False, w)
+        
+        if grid[x + 1][y].type == '-1':
+            grid[x + 1][y] = Tile(type, n, False, e, False)
+        
+        if grid[x][y + 1].type == '-1':
+            grid[x][y + 1] = Tile(type, False, s, False, w)
+            
+        if grid[x + 1][y + 1].type == '-1':
+            grid[x + 1][y + 1] = Tile(type, False, s, e, False)
+        
+    else:
+        if grid[x][y].type == '-1':
+            grid[x][y] = Tile(type, n, s, e, w)
         
     print(f"grid[{x}][{y}] = {grid[x][y].type}, {grid[x][y].N()}, {grid[x][y].S()}, {grid[x][y].E()}, {grid[x][y].W()}")
     
@@ -1333,13 +1712,12 @@ while robot.step(timestep) != -1:
         # TODO: check if checkpoint, swamp, hole
         add_to_map(*get_grid_coords(), type)
         
-    detect_victims(img_right, camera_right)
-    detect_victims(img_left, camera_left)
+    # detect_victims(img_right, camera_right)
+    # detect_victims(img_left, camera_left)
     
     print_info()
     
-    coords_right = detect_victims(camera_right.getImage(), camera_right)
-    coords_left  = detect_victims(camera_left.getImage(),   camera_left)
+    scan_for_signs()
     
     # move_final();
     move_old();
