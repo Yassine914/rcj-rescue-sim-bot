@@ -735,6 +735,7 @@ def print_info():
     print(f"Color sensor values:  {color_sensor_values}")
     print("---------------------------------")
     
+    
 def turn_90(right = True):
     # round current robot angle to the nearest multiple of 90 (0, 90, 180, -90)
     compass_value_rounded_to_nearest_90 = round(compass_value / 90) * 90
@@ -878,12 +879,6 @@ def move_one_tile(tile_size=TILE_WIDTH):
         # 3. there is a hole infront of the robot (we check the colour sensor to see if it is black)
         
         # FIXME: make sure the robot goes back to normal nav mode
-        
-        if has_explored_most_of_the_map():
-            create_new_map()
-            submit_map()
-            # TODO: send exit signal
-            return
 
 
         # if the robot sees an object in front of him, we break the loop, then the function will end
@@ -903,7 +898,8 @@ def move_one_tile(tile_size=TILE_WIDTH):
             
         # return "hole" if color sensor reads black
         if color_sensor_values[0] < BLACK_THRESHOLD and color_sensor_values[1] < BLACK_THRESHOLD and color_sensor_values[2] < BLACK_THRESHOLD:
-            handle_hole()
+            # FIXME: add the hole to the map correctly
+            add_to_map(*get_grid_coords(), '2', full_tile=True)
             return "hole"
 
 def move_one_tile_backwards(tile_size=TILE_WIDTH):
@@ -993,16 +989,17 @@ def move_one_tile_backwards(tile_size=TILE_WIDTH):
                 break
             
         if color_sensor_values[0] < BLACK_THRESHOLD and color_sensor_values[1] < BLACK_THRESHOLD and color_sensor_values[2] < BLACK_THRESHOLD:
-            handle_hole()
+            # FIXME: add the hole to the map correctly
+            add_to_map(*get_grid_coords(), '2', full_tile=True)
             return "hole"
 
 coords = set()
-def current_coords(tilesize=TILE_WIDTH):
+def current_coords():
     get_gps_readings()
     # return the current coordinates of the robot
     # NOTE: each tile is now 4 * (6cm * 6cm)
-    x = round(gps_readings[0] / tilesize) * tilesize
-    y = round(gps_readings[2] / tilesize) * tilesize
+    x = round(gps_readings[0] / TILE_WIDTH) * TILE_WIDTH
+    y = round(gps_readings[2] / TILE_WIDTH) * TILE_WIDTH
     return x, y
 
 def save_coords(x, y):
@@ -1093,62 +1090,19 @@ grid = [[Tile('-1', False, False, False, False) for _ in range(MAX_GRID_SIZE)] f
 # TODO: fix this function
 def has_explored_most_of_the_map() -> bool:
     # return False;
-    global fgrid, fmin_x, fmin_y, fmax_x, fmax_y
-    
-    # check the map size:
-    h, w = (fmax_x - abs(fmin_x)), (fmax_y - abs(fmin_y))
-    
-    if w * h <= 25:
-        return False
-    
+    global grid, min_x, min_y, max_x, max_y
     # return False
     cnt_neg_1 =  0
     total_cnt =  0
-    for i in range(fmin_x, fmax_x):
-        for j in range(fmin_y, fmax_y):
-            cnt_neg_1 += fgrid[i][j].type == '-1'
+    for i in range(min_x, max_x + 1):
+        for j in range(min_y, max_y + 1):
+            cnt_neg_1 += grid[i][j].type == '-1'
             total_cnt += 1
     
-    unexplored_percentage = int(float(cnt_neg_1 / total_cnt) * 100)
+    ratio = (cnt_neg_1 / total_cnt) * 100
     
-    print("______________________ UNEXPLORED PERCENTAGE: " + str(unexplored_percentage) + "%")
-    
-    if unexplored_percentage > 35:
-        return False
-    
-    # # find if in the borders of the map there are unexplored tiles
-    # # using the walls on the outer border and counting them as well
-    # open_paths_cnt = 0
-    # total_paths_cnt = 0
-    
-    # # check the top and bottom borders
-    # for i in range(fmin_x, fmax_x + 1):
-    #     open_paths_cnt += fgrid[i][fmin_y].type == '-1' or fgrid[i][fmin_y].N() == False
-    #     total_paths_cnt += fgrid[i][fmin_y].N() == False
-    
-    # for j in range(fmin_y, fmax_y + 1):
-    #     open_paths_cnt += fgrid[fmin_x][j].type == '-1' or fgrid[fmin_x][j].W() == False
-    #     total_paths_cnt += fgrid[fmin_x][j].W() == False
-    
-    # # check the left and right borders
-    # for i in range(fmin_x, fmax_x + 1):
-    #     open_paths_cnt += fgrid[i][fmax_y].type == '-1' or fgrid[i][fmax_y].S() == False
-    #     total_paths_cnt += fgrid[i][fmax_y].S() == False
-    
-    # for j in range(fmin_y, fmax_y + 1):
-    #     open_paths_cnt += fgrid[fmax_x][j].type == '-1' or fgrid[fmax_x][j].E() == False
-    #     total_paths_cnt += fgrid[fmax_x][j].E() == False
-        
-    # # get the ratio of total_paths to open paths
-    # unexplored_percentage = int(float(open_paths_cnt / total_paths_cnt) * 100)
-    
-    # print("______________________ UNEXPLORED PERCENTAGE OF OPEN PATHS: " + str(unexplored_percentage) + "%")
-    
-    # if unexplored_percentage > 30:
-    #     return False
-    
-    return True
-
+    print("______________________ UNEXPLORED PERCENTAGE: " + str(ratio) + "%")
+    return ratio <= 10 and ratio > 0
 
 def move_forward():
     right_wheel.setVelocity(velocity)
@@ -1176,50 +1130,17 @@ def stuck():
         # stop()
         # move_to_previous_tile()
         move_one_tile_backwards(tile_size=3)
-        add_to_map(*get_next_grid_coords(), '1')
+        
+        add_to_map(*get_next_grid_coords(), '1', full_tile=True)
         
         return True
     
     return False
 
-def handle_hole():
-    x, y = get_next_grid_coords()
-    add_to_map(x, y, '2')
-    add_to_map(x - 1, y, '2')
-    nx, ny = get_next_grid_coords(x, y)
-    add_to_map(nx, ny, '2')
-    nx, ny = get_next_grid_coords(x - 1, y)
-    add_to_map(nx, ny, '2')
-    move_one_tile_backwards(tile_size=3)
-    pass
-
-
-# def get_current_tile_type():
-#     # TODO: get the tile type from the color sensor
-#     col = get_color_sensor_color()
-#     pass
 
 def get_current_tile_type():
-    image = color_sensor.getImage()
-    r = color_sensor.imageGetRed(image, 1, 0, 0)
-    g = color_sensor.imageGetGreen(image, 1, 0, 0)
-    b = color_sensor.imageGetBlue(image, 1, 0, 0)
-    print(f"Detected RGB: R={r}, G={g}, B={b}")
-    
-    
-    if b > 220 and r < 100 and g < 100:
-        print("Tile is BLUE (A1 -> A2)")
-        return '6'
-    elif r > 140 and b > 190 and g < 100:
-        print("Tile is PURPLE (A2 -> A3)")
-        return '7'
-    elif r > 230 and g < 90 and b < 90:
-        print("Tile is RED (A3 -> A4)")
-        return '8'
-    elif g > 230 and r < 90 and b < 90:
-        print("Tile is GREEN (A4 -> A1)")
-        return '9'
-    
+    # TODO: get the tile type from the color sensor
+    pass
 
 def nav_to_nearest_unvisited_tile():
     print("Robot may be stuck in a loop - searching for nearest unvisited tile...")
@@ -1250,25 +1171,25 @@ def nav_to_nearest_unvisited_tile():
         
         # Check neighboring cells with consistency checks
         # North (both cells agree there's no wall)
-        if not grid[x][y].N() and not grid[x][y-1].S() and grid[x][y-1].type not in ['2', '1']:
+        if not grid[x][y].N() and y > min_y and not grid[x][y-1].S():
             if (x, y-1) not in visited:
                 visited.add((x, y-1))
                 queue.append((x, y-1, path + ['north']))
             
         # South (both cells agree there's no wall)
-        if not grid[x][y].S() and not grid[x][y+1].N() and grid[x][y+1].type not in ['2', '1']:
+        if not grid[x][y].S() and y < max_y and not grid[x][y+1].N():
             if (x, y+1) not in visited:
                 visited.add((x, y+1))
                 queue.append((x, y+1, path + ['south']))
             
         # East (both cells agree there's no wall)
-        if not grid[x][y].E() and  not grid[x+1][y].W() and grid[x+1][y].type not in ['2', '1']:
+        if not grid[x][y].E() and x < max_x and not grid[x+1][y].W():
             if (x+1, y) not in visited:
                 visited.add((x+1, y))
                 queue.append((x+1, y, path + ['east']))
             
         # West (both cells agree there's no wall)
-        if not grid[x][y].W() and not grid[x-1][y].E() and grid[x-1][y].type not in ['2', '1']:
+        if not grid[x][y].W() and x > min_x and not grid[x-1][y].E():
             if (x-1, y) not in visited:
                 visited.add((x-1, y))
                 queue.append((x-1, y, path + ['west']))
@@ -1619,13 +1540,10 @@ def move_final():
     
     return
 
-def get_grid_coords(x=None, y=None, tilesize=TILE_WIDTH) -> tuple:
-    if x is not None and y is not None:
-        return x, y
-    
-    cx, cy = current_coords(tilesize)
-    x = round(cx / tilesize) + MAP_CONSTANT
-    y = round(cy / tilesize) + MAP_CONSTANT
+def get_grid_coords(x=None, y=None) -> tuple:
+    cx, cy = current_coords() if x is None and y is None else (x, y)
+    x = round(cx / TILE_WIDTH) + MAP_CONSTANT
+    y = round(cy / TILE_WIDTH) + MAP_CONSTANT
     return x, y
 
 def get_next_grid_coords(x=None, y=None) -> tuple:
@@ -1699,9 +1617,8 @@ def get_global_walls() -> tuple:
     # ret   n  s  e  w
     return (f, b, r, l)
 
-def add_to_map(x, y, type='0'):
+def add_to_map(x, y, type, full_tile=False):
     global grid, max_x, max_y, min_x, min_y, start
-    add_to_full_grid(type)
     
     # update x and y
     if not start:
@@ -1725,86 +1642,47 @@ def add_to_map(x, y, type='0'):
     n, s, e, w = get_global_walls()
     print(f"\twalls: north: {n}, south: {s}, east: {e}, west: {w}")
     
-    if grid[x][y].type == '-1':
-        grid[x][y] = Tile(type, n, s, e, w)
+    # TODO: for normal tiles: make sure we check for the entire range of the ladar
+    if full_tile:
+        # add full tile
+        if grid[x][y].type == '-1':
+            grid[x][y] = Tile(type, n, False, False, w)
+        
+        if grid[x + 1][y].type == '-1':
+            grid[x + 1][y] = Tile(type, n, False, e, False)
+        
+        if grid[x][y + 1].type == '-1':
+            grid[x][y + 1] = Tile(type, False, s, False, w)
+            
+        if grid[x + 1][y + 1].type == '-1':
+            grid[x + 1][y + 1] = Tile(type, False, s, e, False)
+        
+    else:
+        if grid[x][y].type == '-1':
+            grid[x][y] = Tile(type, n, s, e, w)
         
     print(f"grid[{x}][{y}] = {grid[x][y].type}, {grid[x][y].N()}, {grid[x][y].S()}, {grid[x][y].E()}, {grid[x][y].W()}")
     
-    
     # print map
-    # print("---map start---\n\n")
-    # for i in range(min_y - 1, max_y + 2):
-    #     for j in range(min_x - 1, max_x + 2):
-    #         print(grid[j][i].Type(), end=' ')
-    #     print()
-        
-    # # grid[x][y] = Tile(type, False, False, False, False)
-    # print("---map end---\n\n")
-
-
-
-fgrid = [[Tile('-1', False, False, False, False) for _ in range(MAX_GRID_SIZE)] for _ in range(MAX_GRID_SIZE)]
-
-def get_full_coords():
-    return get_grid_coords(tilesize=12)
-
-fmin_x = 0 + MAP_CONSTANT
-fmin_y = 0 + MAP_CONSTANT
-fmax_x = 1 + MAP_CONSTANT
-fmax_y = 1 + MAP_CONSTANT
-
-first_tile = True
-def add_to_full_grid(type):
-    global fgrid, fmax_x, fmax_y, fmin_x, fmin_y, first_tile
-    # x, y = get_full_coords()
-    
-    x, y = gps_readings[0], gps_readings[2]
-    x = round(x / 12) + MAP_CONSTANT
-    y = round(y / 12) + MAP_CONSTANT
-    
-    # update x and y
-    if not first_tile:
-        fmin_x = min(fmin_x, x);
-        fmin_y = min(fmin_y, y);
-        fmax_x = max(fmax_x, x);
-        fmax_y = max(fmax_y, y);
-    else:
-        fmin_x = x - 1
-        fmin_y = y - 1
-        fmax_x = x
-        fmax_y = y
-        first_tile = False
-    
-    print("--------------- full map -----------------------")
-    print(f"\tcurrent x: {x}, current y: {y}")
-    
-    print("\tgrid size: ", fmax_x - fmin_x, '*', fmax_y - fmin_y)
-    print(f"\tfrom ({fmin_x}, {fmin_y}) to ({fmax_x}, {fmax_y})");
-    
-    # type = get_current_tile_type() if type == '0' else type
-    n, s, e, w = get_global_walls()
-    
-    if fgrid[x - 1][y - 1].type == '-1':
-        fgrid[x - 1][y - 1] = Tile(type, n, s, e, w)
-        
-    print("fgrid[", x - 1, "][", y - 1, "] = ", fgrid[x - 1][y - 1].type, ", ", fgrid[x - 1][y - 1].N(), ", ", fgrid[x - 1][y - 1].S(), ", ", fgrid[x - 1][y - 1].E(), ", ", fgrid[x - 1][y - 1].W())
-   
-    # print map
-    for i in range(fmin_y - 1, fmax_y + 1):
-        for j in range(fmin_x - 1, fmax_x + 1):
-            print(fgrid[j][i].type, end=' ')
+    print("---map start---\n\n")
+    for i in range(min_y - 1, max_y + 2):
+        for j in range(min_x - 1, max_x + 2):
+            print(grid[j][i].Type(), end=' ')
         print()
-    
-    print("--------------- full map -----------------------")
+        
+    # grid[x][y] = Tile(type, False, False, False, False)
+    print("---map end---\n\n")
     
 
 map = None
 def create_new_map():
-    global fgrid, fmax_x, fmax_y, fmin_x, fmin_y, map
+    global grid, max_x, max_y, min_x, min_y, map
     # area becomes [4 * (max_x + abs(min_x)), 4 * (max_y + abs(min_y))]
-    MAX_X = 4 *(fmax_x + abs(fmin_x) + 1) + 1
-    MAX_Y = 4 * (fmax_y + abs(fmin_y) + 1) + 1
+    MAX_X = 4 *(max_x + abs(min_x) + 1) + 1
+    MAX_Y = 4 * (max_y + abs(min_y) + 1) + 1
     map = [['0'] * (MAX_X) for _ in range(MAX_Y)]
+    
+    print("___________ TYPE OF GRID CELL: ", type(grid[0][0]))
     
     # loop over the og grid from (min_x, min_y) to (max_x, max_y)
     # each tile becomes 4x4 with the same value on the corners and 0 in the middle
@@ -1812,40 +1690,40 @@ def create_new_map():
     n, m = 0, 0
     # every tile add 4 to n, m
     
-    for i in range(fmin_x, fmax_x + 1):
-        for j in range(fmin_y, fmax_y + 1):
+    for i in range(min_x, max_x + 1):
+        for j in range(min_y, max_y + 1):
             
             # print("_____________________________ : ", grid[i][j].Type())
             # convert to 4x4
             
             for k in range(m, m + 4):
-                map[n][k] = 1 if fgrid[i][j].N() else 0
+                map[n][k] = 1 if grid[i][j].N() else 0
             
             for k in range(n + 1, n + 4):
-                map[k][m] = 1 if fgrid[i][j].W() else 0
+                map[k][m] = 1 if grid[i][j].W() else 0
             
-            map[n + 1][m + 1] = fgrid[i][j].Type()
-            map[n + 3][m + 1] = fgrid[i][j].Type()
-            map[n + 1][m + 3] = fgrid[i][j].Type()
-            map[n + 3][m + 3] = fgrid[i][j].Type()
+            map[n + 1][m + 1] = grid[i][j].Type()
+            map[n + 3][m + 1] = grid[i][j].Type()
+            map[n + 1][m + 3] = grid[i][j].Type()
+            map[n + 3][m + 3] = grid[i][j].Type()
             
             # rightmost side (handle east wall)
             if i == max_x:
                 for k in range(m, m + 5):
-                    map[n + 4][k] = 1 if fgrid[i][j].E() else 0
+                    map[n + 4][k] = 1 if grid[i][j].E() else 0
                 
             if j == max_y:
                 for k in range(n, n + 5):
-                    map[k][m + 4] = 1 if fgrid[i][j].S() else 0
+                    map[k][m + 4] = 1 if grid[i][j].S() else 0
             
             n += 4
         m += 4
             
-    # # print the map
-    # for i in range(fmin_x, fmax_x + 2):
-    #     for j in range(fmin_y, fmax_y + 2):
-    #         print(grid[i][j].Type(), end=' ')
-    #     print()
+    # print the map
+    for i in range(min_x, max_x + 2):
+        for j in range(min_y, max_y + 2):
+            print(grid[i][j].Type(), end=' ')
+        print()
     
             
 def submit_map():
@@ -1876,12 +1754,12 @@ def submit_map():
     emitter.send(exit_mes)
 
 # endregion
+
 # region main
 
 startt = True
 while robot.step(timestep) != -1:
     get_all_sesnor_values()
-    
     
     if startt:
         add_to_map(*get_grid_coords(), '5')
