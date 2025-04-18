@@ -835,8 +835,7 @@ def move_one_tile(tile_size=TILE_WIDTH):
             
         # return "hole" if color sensor reads black
         if color_sensor_values[0] < BLACK_THRESHOLD and color_sensor_values[1] < BLACK_THRESHOLD and color_sensor_values[2] < BLACK_THRESHOLD:
-            # FIXME: add the hole to the map correctly
-            add_to_map(*get_grid_coords(), '2', full_tile=True)
+            handle_hole()
             return "hole"
 
 def move_one_tile_backwards(tile_size=TILE_WIDTH):
@@ -926,8 +925,7 @@ def move_one_tile_backwards(tile_size=TILE_WIDTH):
                 break
             
         if color_sensor_values[0] < BLACK_THRESHOLD and color_sensor_values[1] < BLACK_THRESHOLD and color_sensor_values[2] < BLACK_THRESHOLD:
-            # FIXME: add the hole to the map correctly
-            add_to_map(*get_grid_coords(), '2', full_tile=True)
+            handle_hole()
             return "hole"
 
 coords = set()
@@ -1067,12 +1065,22 @@ def stuck():
         # stop()
         # move_to_previous_tile()
         move_one_tile_backwards(tile_size=3)
-        
-        add_to_map(*get_next_grid_coords(), '1', full_tile=True)
+        add_to_map(*get_next_grid_coords(), '1')
         
         return True
     
     return False
+
+def handle_hole():
+    x, y = get_next_grid_coords()
+    add_to_map(x, y, '2')
+    add_to_map(x - 1, y, '2')
+    nx, ny = get_next_grid_coords(x, y)
+    add_to_map(nx, ny, '2')
+    nx, ny = get_next_grid_coords(x - 1, y)
+    add_to_map(nx, ny, '2')
+    move_one_tile_backwards(tile_size=3)
+    pass
 
 
 def get_current_tile_type():
@@ -1108,25 +1116,25 @@ def nav_to_nearest_unvisited_tile():
         
         # Check neighboring cells with consistency checks
         # North (both cells agree there's no wall)
-        if not grid[x][y].N() and y > min_y and not grid[x][y-1].S():
+        if not grid[x][y].N() and y > min_y and not grid[x][y-1].S() and grid[x][y-1].type not in ['2', '1']:
             if (x, y-1) not in visited:
                 visited.add((x, y-1))
                 queue.append((x, y-1, path + ['north']))
             
         # South (both cells agree there's no wall)
-        if not grid[x][y].S() and y < max_y and not grid[x][y+1].N():
+        if not grid[x][y].S() and y < max_y and not grid[x][y+1].N() and grid[x][y+1].type not in ['2', '1']:
             if (x, y+1) not in visited:
                 visited.add((x, y+1))
                 queue.append((x, y+1, path + ['south']))
             
         # East (both cells agree there's no wall)
-        if not grid[x][y].E() and x < max_x and not grid[x+1][y].W():
+        if not grid[x][y].E() and x < max_x and not grid[x+1][y].W() and grid[x+1][y].type not in ['2', '1']:
             if (x+1, y) not in visited:
                 visited.add((x+1, y))
                 queue.append((x+1, y, path + ['east']))
             
         # West (both cells agree there's no wall)
-        if not grid[x][y].W() and x > min_x and not grid[x-1][y].E():
+        if not grid[x][y].W() and x > min_x and not grid[x-1][y].E() and grid[x-1][y].type not in ['2', '1']:
             if (x-1, y) not in visited:
                 visited.add((x-1, y))
                 queue.append((x-1, y, path + ['west']))
@@ -1478,7 +1486,10 @@ def move_final():
     return
 
 def get_grid_coords(x=None, y=None) -> tuple:
-    cx, cy = current_coords() if x is None and y is None else (x, y)
+    if x is not None and y is not None:
+        return x, y
+    
+    cx, cy = current_coords()
     x = round(cx / TILE_WIDTH) + MAP_CONSTANT
     y = round(cy / TILE_WIDTH) + MAP_CONSTANT
     return x, y
@@ -1554,7 +1565,7 @@ def get_global_walls() -> tuple:
     # ret   n  s  e  w
     return (f, b, r, l)
 
-def add_to_map(x, y, type, full_tile=False):
+def add_to_map(x, y, type):
     global grid, max_x, max_y, min_x, min_y, start
     
     # update x and y
@@ -1580,23 +1591,8 @@ def add_to_map(x, y, type, full_tile=False):
     print(f"\twalls: north: {n}, south: {s}, east: {e}, west: {w}")
     
     # TODO: for normal tiles: make sure we check for the entire range of the ladar
-    if full_tile:
-        # add full tile
-        if grid[x][y].type == '-1':
-            grid[x][y] = Tile(type, n, False, False, w)
-        
-        if grid[x + 1][y].type == '-1':
-            grid[x + 1][y] = Tile(type, n, False, e, False)
-        
-        if grid[x][y + 1].type == '-1':
-            grid[x][y + 1] = Tile(type, False, s, False, w)
-            
-        if grid[x + 1][y + 1].type == '-1':
-            grid[x + 1][y + 1] = Tile(type, False, s, e, False)
-        
-    else:
-        if grid[x][y].type == '-1':
-            grid[x][y] = Tile(type, n, s, e, w)
+    if grid[x][y].type == '-1':
+        grid[x][y] = Tile(type, n, s, e, w)
         
     print(f"grid[{x}][{y}] = {grid[x][y].type}, {grid[x][y].N()}, {grid[x][y].S()}, {grid[x][y].E()}, {grid[x][y].W()}")
     
@@ -1609,7 +1605,6 @@ def add_to_map(x, y, type, full_tile=False):
         
     # grid[x][y] = Tile(type, False, False, False, False)
     print("---map end---\n\n")
-    
 
 map = None
 def create_new_map():
@@ -1618,8 +1613,6 @@ def create_new_map():
     MAX_X = 4 *(max_x + abs(min_x) + 1) + 1
     MAX_Y = 4 * (max_y + abs(min_y) + 1) + 1
     map = [['0'] * (MAX_X) for _ in range(MAX_Y)]
-    
-    print("___________ TYPE OF GRID CELL: ", type(grid[0][0]))
     
     # loop over the og grid from (min_x, min_y) to (max_x, max_y)
     # each tile becomes 4x4 with the same value on the corners and 0 in the middle
