@@ -270,6 +270,8 @@ def report(type):
     pos_z = int(pos[2] * 100)
     scanned_signs.append((pos_x, pos_z))
     
+    add_to_full_grid(type)
+    
     sign_type = bytes(type, "utf-8")
     msg = struct.pack("i i c", pos_x, pos_z, sign_type)  # Pack the message.
     
@@ -578,13 +580,17 @@ def detect_letters_old(sign, camera) -> str:
         return 'H'
     elif num_contours_first == 3 and num_contours_third == 2:
         return 'H'
+    elif num_contours_first == 0 and num_contours_third == 0 and num_contours_middle == 0:
+        return 'S'
+    elif num_contours_first == 1 and num_contours_third == 3 and num_contours_middle == 2:
+        return 'S'
     elif num_contours_first == 4 and num_contours_third == 4 and not num_contours_middle == 5:
         return 'S'
     elif num_contours_first == 4 and num_contours_third == 5 and not num_contours_middle == 4 and not num_contours_middle == 8 :
         return 'S'
     elif num_contours_first == 1 and num_contours_third == 3 and num_contours_middle == 2:
         return 'S'
-    elif num_contours_first == 4 and num_contours_third == 3 and not num_contours_middle == 5:
+    elif num_contours_first == 4 and num_contours_third == 3 and not num_contours_middle == 5 and not num_contours_middle == 4:
         return 'S'
     elif num_contours_first == 0 and num_contours_third == 2:
         return 'S'
