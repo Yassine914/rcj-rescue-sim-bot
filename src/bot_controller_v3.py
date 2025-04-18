@@ -60,6 +60,9 @@ curr_area = 1
 
 total_time_passed = 0
 
+receiver = robot.getDevice("receiver")
+receiver.enable(timestep)
+
 # endregion
 # region sensor_data
 
@@ -879,11 +882,11 @@ def move_one_tile(tile_size=TILE_WIDTH):
         
         # FIXME: make sure the robot goes back to normal nav mode
         
-        if has_explored_most_of_the_map():
-            create_new_map()
-            submit_map()
-            # TODO: send exit signal
-            return
+        check_and_submit_map()
+            # create_new_map()
+            # submit_map()
+            # # TODO: send exit signal
+            # return
 
 
         # if the robot sees an object in front of him, we break the loop, then the function will end
@@ -1090,10 +1093,32 @@ class Tile:
 MAX_GRID_SIZE = 500 
 grid = [[Tile('-1', False, False, False, False) for _ in range(MAX_GRID_SIZE)] for _ in range(MAX_GRID_SIZE)]
 
-# TODO: fix this function
-def has_explored_most_of_the_map() -> bool:
-    # return False;
+def get_time_remaining():
+    return 90
+    global emitter, receiver
+    message = struct.pack('c', 'G'.encode()) # message = 'G' for game information
+    emitter.send(message) # send message
+
+    cur = None 
+    receivedData = None
+    if receiver.getQueueLength() > 0: # If receiver queue is not empty
+        receivedData = receiver.getBytes()
+        
+        tup = struct.unpack('c f i', receivedData) # Parse data into char, float, int
+        if tup[0].decode("utf-8") == 'G':
+            # print(f'Game Score: {tup[1]}  Remaining time: {tup[2]}')
+            cur = tup[2]
+            receiver.nextPacket() # Discard the current data packet
+
+    return cur
+
+def has_finished_exploring() -> bool:
     global fgrid, fmin_x, fmin_y, fmax_x, fmax_y
+    
+    t = get_time_remaining()
+    
+    if t is not None and t <= 6:
+        return True
     
     # check the map size:
     h, w = (fmax_x - abs(fmin_x)), (fmax_y - abs(fmin_y))
@@ -1113,41 +1138,20 @@ def has_explored_most_of_the_map() -> bool:
     
     print("______________________ UNEXPLORED PERCENTAGE: " + str(unexplored_percentage) + "%")
     
-    if unexplored_percentage > 35:
+    if unexplored_percentage > 30:
         return False
     
-    # # find if in the borders of the map there are unexplored tiles
-    # # using the walls on the outer border and counting them as well
-    # open_paths_cnt = 0
-    # total_paths_cnt = 0
-    
-    # # check the top and bottom borders
-    # for i in range(fmin_x, fmax_x + 1):
-    #     open_paths_cnt += fgrid[i][fmin_y].type == '-1' or fgrid[i][fmin_y].N() == False
-    #     total_paths_cnt += fgrid[i][fmin_y].N() == False
-    
-    # for j in range(fmin_y, fmax_y + 1):
-    #     open_paths_cnt += fgrid[fmin_x][j].type == '-1' or fgrid[fmin_x][j].W() == False
-    #     total_paths_cnt += fgrid[fmin_x][j].W() == False
-    
-    # # check the left and right borders
-    # for i in range(fmin_x, fmax_x + 1):
-    #     open_paths_cnt += fgrid[i][fmax_y].type == '-1' or fgrid[i][fmax_y].S() == False
-    #     total_paths_cnt += fgrid[i][fmax_y].S() == False
-    
-    # for j in range(fmin_y, fmax_y + 1):
-    #     open_paths_cnt += fgrid[fmax_x][j].type == '-1' or fgrid[fmax_x][j].E() == False
-    #     total_paths_cnt += fgrid[fmax_x][j].E() == False
-        
-    # # get the ratio of total_paths to open paths
-    # unexplored_percentage = int(float(open_paths_cnt / total_paths_cnt) * 100)
-    
-    # print("______________________ UNEXPLORED PERCENTAGE OF OPEN PATHS: " + str(unexplored_percentage) + "%")
-    
-    # if unexplored_percentage > 30:
-    #     return False
-    
     return True
+
+def send_exit_signal():
+    robot.step(1000)
+    emitter.send(bytes('E', "utf-8"))
+
+def check_and_submit_map():
+    if has_finished_exploring():
+        create_new_map()
+        submit_map()
+        send_exit_signal()
 
 
 def move_forward():
@@ -1169,7 +1173,9 @@ def stuck():
     
     f = True
     for i in range(0, 512):
-        f &= (lidar_values[2][i]>4.1)
+        f &= (lidar_values[2][i]> 4.3)
+    
+    print("----------------- could be stuck right now -----------------------------");
 
     if f == False:
         
@@ -1430,7 +1436,8 @@ def nav_to_least_visited_tile():
     
     print("navigation failed - couldn't find a better tile to visit")
     
-    turn_90(right=random.choice([True, False]))
+    turn_90()
+    turn_90()
     move_one_tile()
     return False
 
@@ -1521,10 +1528,10 @@ def move_old():
             # turn_90()
         
         
-        if has_explored_most_of_the_map():
-            print("- - - - - - - - - - - we have explored most of the map - - - - - -  - - - - ")
-            create_new_map()
-            submit_map()
+        check_and_submit_map()
+            # print("- - - - - - - - - - - we have explored most of the map - - - - - -  - - - - ")
+            # create_new_map()
+            # submit_map()
         
         # If successful move or max attempts reached, exit the loop
         if result != "hole" and result != "stuck":
