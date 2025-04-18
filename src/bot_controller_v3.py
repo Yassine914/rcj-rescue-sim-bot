@@ -835,6 +835,7 @@ def move_one_tile(tile_size=TILE_WIDTH):
             
         # return "hole" if color sensor reads black
         if color_sensor_values[0] < BLACK_THRESHOLD and color_sensor_values[1] < BLACK_THRESHOLD and color_sensor_values[2] < BLACK_THRESHOLD:
+            # FIXME: add the hole to the map correctly
             add_to_map(*get_grid_coords(), '2', full_tile=True)
             return "hole"
 
@@ -925,6 +926,7 @@ def move_one_tile_backwards(tile_size=TILE_WIDTH):
                 break
             
         if color_sensor_values[0] < BLACK_THRESHOLD and color_sensor_values[1] < BLACK_THRESHOLD and color_sensor_values[2] < BLACK_THRESHOLD:
+            # FIXME: add the hole to the map correctly
             add_to_map(*get_grid_coords(), '2', full_tile=True)
             return "hole"
 
@@ -1022,6 +1024,7 @@ class Tile:
 MAX_GRID_SIZE = 500 
 grid = [[Tile('-1', False, False, False, False) for _ in range(MAX_GRID_SIZE)] for _ in range(MAX_GRID_SIZE)]
 
+# TODO: fix this function
 def has_explored_most_of_the_map() -> bool:
     # return False;
     global grid, min_x, min_y, max_x, max_y
@@ -1577,7 +1580,6 @@ def add_to_map(x, y, type, full_tile=False):
     print(f"\twalls: north: {n}, south: {s}, east: {e}, west: {w}")
     
     # TODO: for normal tiles: make sure we check for the entire range of the ladar
-    
     if full_tile:
         # add full tile
         if grid[x][y].type == '-1':
