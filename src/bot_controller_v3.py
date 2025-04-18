@@ -1181,25 +1181,25 @@ def nav_to_nearest_unvisited_tile():
         
         # Check neighboring cells with consistency checks
         # North (both cells agree there's no wall)
-        if not grid[x][y].N() and y > min_y and not grid[x][y-1].S() and grid[x][y-1].type not in ['2', '1']:
+        if not grid[x][y].N() and not grid[x][y-1].S() and grid[x][y-1].type not in ['2', '1']:
             if (x, y-1) not in visited:
                 visited.add((x, y-1))
                 queue.append((x, y-1, path + ['north']))
             
         # South (both cells agree there's no wall)
-        if not grid[x][y].S() and y < max_y and not grid[x][y+1].N() and grid[x][y+1].type not in ['2', '1']:
+        if not grid[x][y].S() and not grid[x][y+1].N() and grid[x][y+1].type not in ['2', '1']:
             if (x, y+1) not in visited:
                 visited.add((x, y+1))
                 queue.append((x, y+1, path + ['south']))
             
         # East (both cells agree there's no wall)
-        if not grid[x][y].E() and x < max_x and not grid[x+1][y].W() and grid[x+1][y].type not in ['2', '1']:
+        if not grid[x][y].E() and  not grid[x+1][y].W() and grid[x+1][y].type not in ['2', '1']:
             if (x+1, y) not in visited:
                 visited.add((x+1, y))
                 queue.append((x+1, y, path + ['east']))
             
         # West (both cells agree there's no wall)
-        if not grid[x][y].W() and x > min_x and not grid[x-1][y].E() and grid[x-1][y].type not in ['2', '1']:
+        if not grid[x][y].W() and not grid[x-1][y].E() and grid[x-1][y].type not in ['2', '1']:
             if (x-1, y) not in visited:
                 visited.add((x-1, y))
                 queue.append((x-1, y, path + ['west']))
