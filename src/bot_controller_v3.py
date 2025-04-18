@@ -1094,21 +1094,22 @@ MAX_GRID_SIZE = 500
 grid = [[Tile('-1', False, False, False, False) for _ in range(MAX_GRID_SIZE)] for _ in range(MAX_GRID_SIZE)]
 
 def get_time_remaining():
-    return 90
     global emitter, receiver
     message = struct.pack('c', 'G'.encode()) # message = 'G' for game information
     emitter.send(message) # send message
 
-    cur = None 
-    receivedData = None
+    cur = None
+
     if receiver.getQueueLength() > 0: # If receiver queue is not empty
         receivedData = receiver.getBytes()
-        
-        tup = struct.unpack('c f i', receivedData) # Parse data into char, float, int
-        if tup[0].decode("utf-8") == 'G':
-            # print(f'Game Score: {tup[1]}  Remaining time: {tup[2]}')
-            cur = tup[2]
-            receiver.nextPacket() # Discard the current data packet
+        try:
+            tup = struct.unpack('c f i', receivedData[:12]) # Parse data into char, float, int
+            if tup[0].decode("utf-8") == 'G':
+                cur = tup[2]
+        except Exception as e:
+            print("Error unpacking data:", e)
+
+        receiver.nextPacket()
 
     return cur
 
