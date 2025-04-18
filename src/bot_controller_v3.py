@@ -191,8 +191,28 @@ def get_color_sensor_color() -> str:
     elif r>=100 and g>=100 and b<=100:
         return 'swamp'
     else:
-        return None
-
+        return 'white'
+    
+def get_tile_type() -> str:
+    col = get_color_sensor_color()
+    
+    if col == 'swamp':
+        return '3'
+    elif col == 'grey':
+        return '4'
+    elif col == 'blue':
+        return 'b'
+    elif col == 'yellow':
+        return 'y'
+    elif col == 'green':
+        return 'g'
+    elif col == 'purple':
+        return 'p'
+    elif col == 'orange':
+        return 'o'
+    elif col == 'red':
+        return 'r'
+    
 def change_area(col):
     global curr_area
     if curr_area == 1:
@@ -1206,27 +1226,7 @@ def handle_hole():
 #     col = get_color_sensor_color()
 #     pass
 
-def get_current_tile_type():
-    image = color_sensor.getImage()
-    r = color_sensor.imageGetRed(image, 1, 0, 0)
-    g = color_sensor.imageGetGreen(image, 1, 0, 0)
-    b = color_sensor.imageGetBlue(image, 1, 0, 0)
-    print(f"Detected RGB: R={r}, G={g}, B={b}")
-    
-    
-    if b > 220 and r < 100 and g < 100:
-        print("Tile is BLUE (A1 -> A2)")
-        return '6'
-    elif r > 140 and b > 190 and g < 100:
-        print("Tile is PURPLE (A2 -> A3)")
-        return '7'
-    elif r > 230 and g < 90 and b < 90:
-        print("Tile is RED (A3 -> A4)")
-        return '8'
-    elif g > 230 and r < 90 and b < 90:
-        print("Tile is GREEN (A4 -> A1)")
-        return '9'
-    
+   
 
 def nav_to_nearest_unvisited_tile():
     print("Robot may be stuck in a loop - searching for nearest unvisited tile...")
@@ -1895,14 +1895,9 @@ while robot.step(timestep) != -1:
         add_to_map(*get_grid_coords(), '5')
         startt = False
     else:
-        type = '0'
-        # add_to_map(*get_grid_coords(), '0')
-    
-        col = get_color_sensor_color()
-        if col not in ['white', 'black', 'swamp', 'grey']:
-            type = '1'
-            # TODO: map types of cells
-            change_area(col)
+        type = get_tile_type()
+        
+        change_area(get_color_sensor_color())
         
         # TODO: check if checkpoint, swamp, hole
         add_to_map(*get_grid_coords(), type)
