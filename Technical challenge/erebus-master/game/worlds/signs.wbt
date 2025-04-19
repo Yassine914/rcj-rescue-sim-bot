@@ -1,0 +1,250 @@
+#VRML_SIM R2023b utf8
+
+EXTERNPROTO "../protos/TexturedBackgroundLight.proto"
+EXTERNPROTO "../protos/TexturedBackground.proto"
+EXTERNPROTO "../protos/HazardMap.proto"
+EXTERNPROTO "../protos/worldTile.proto"
+IMPORTABLE EXTERNPROTO "../protos/custom_robot.proto"
+
+WorldInfo {
+  basicTimeStep 16
+  coordinateSystem "NUE"
+  contactProperties [
+    ContactProperties {
+      material1 "TILE"
+      material2 "NO_FRIC"
+      coulombFriction [
+        0
+      ]
+      bounce 0
+      bumpSound ""
+      rollSound ""
+      slideSound ""
+    }
+  ]
+}
+DEF Viewpoint Viewpoint {
+  orientation -0.6832632393515958 0.6832632393515958 0.25749309020151906 2.63756
+  position -0.06110126001614167 0.6098172659749339 0.4740086401682054
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+DEF WALLTILES Group {
+  children [
+    DEF START_TILE worldTile {
+      floor TRUE
+      topWall 1
+      leftWall 1
+      topExternal TRUE
+      leftExternal TRUE
+      start TRUE
+      width 4
+      height 2
+      id "0"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      zPos 1
+      floor TRUE
+      bottomWall 5
+      leftWall 3
+      leftExternal TRUE
+      bottomExternal TRUE
+      width 4
+      height 2
+      id "1"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 1
+      floor TRUE
+      topWall 1
+      topExternal TRUE
+      width 4
+      height 2
+      id "2"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 1
+      zPos 1
+      floor TRUE
+      bottomWall 1
+      bottomExternal TRUE
+      width 4
+      height 2
+      id "3"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 2
+      floor TRUE
+      topWall 1
+      topExternal TRUE
+      width 4
+      height 2
+      id "4"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 2
+      zPos 1
+      floor TRUE
+      bottomWall 1
+      bottomExternal TRUE
+      width 4
+      height 2
+      id "5"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 3
+      floor TRUE
+      rightWall 2
+      topWall 3
+      topExternal TRUE
+      rightExternal TRUE
+      width 4
+      height 2
+      id "6"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 3
+      zPos 1
+      floor TRUE
+      rightWall 3
+      bottomWall 3
+      rightExternal TRUE
+      bottomExternal TRUE
+      width 4
+      height 2
+      id "7"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+  ]
+}
+DEF CHECKPOINTBOUNDS Group {
+}
+DEF TRAPBOUNDS Group {
+}
+DEF STARTBOUNDS Group {
+  children [
+    DEF boundary Group {
+      children [
+        DEF start0min Pose {
+          translation -0.3 -0.03 -0.18
+        }
+        DEF start0max Pose {
+          translation -0.18 -0.03 -0.06
+        }
+      ]
+    }
+  ]
+}
+DEF SWAMPBOUNDS Group {
+}
+DEF OBSTACLES Group {
+}
+DEF HUMANGROUP Group {
+}
+DEF HAZARDGROUP Group {
+  children [
+    HazardMap {
+      translation -0.24 0 -0.1744
+      rotation 0 1 0 3.14
+      name "Hazard0"
+      type "Z"
+    }
+    HazardMap {
+      translation -0.24 0 0.054400000000000004
+      rotation 0 1 0 0
+      name "Hazard1"
+      type "Z"
+    }
+    HazardMap {
+      translation -0.12 0 -0.1744
+      rotation 0 1 0 3.14
+      name "Hazard2"
+      type "X"
+    }
+    HazardMap {
+      translation -0.12 0 0.054400000000000004
+      rotation 0 1 0 0
+      name "Hazard3"
+      type "X"
+    }
+    HazardMap {
+      translation 0 0 -0.1744
+      rotation 0 1 0 3.14
+      name "Hazard4"
+      type "Y"
+    }
+    HazardMap {
+      translation 0 0 0.054400000000000004
+      rotation 0 1 0 0
+      name "Hazard5"
+      type "Y"
+    }
+    HazardMap {
+      translation 0.12 0 -0.1744
+      rotation 0 1 0 3.14
+      name "Hazard6"
+      type "A"
+    }
+    HazardMap {
+      translation 0.12 0 0.054400000000000004
+      rotation 0 1 0 0
+      name "Hazard7"
+      type "A"
+    }
+  ]
+}
+DEF MAINSUPERVISOR Robot {
+  children [
+    Receiver {
+      channel 1
+    }
+    Emitter {
+      channel 1
+    }
+  ]
+  controller "MainSupervisor"
+  customData "480"
+  supervisor TRUE
+  window "MainSupervisorWindow"
+}

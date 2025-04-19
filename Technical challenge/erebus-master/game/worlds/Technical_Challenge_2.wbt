@@ -1,0 +1,1454 @@
+#VRML_SIM R2023b utf8
+
+EXTERNPROTO "../protos/TexturedBackgroundLight.proto"
+EXTERNPROTO "../protos/TexturedBackground.proto"
+EXTERNPROTO "../protos/halfTile.proto"
+EXTERNPROTO "../protos/HazardMap.proto"
+EXTERNPROTO "../protos/worldTile.proto"
+IMPORTABLE EXTERNPROTO "../protos/custom_robot.proto"
+
+WorldInfo {
+  basicTimeStep 16
+  coordinateSystem "NUE"
+  contactProperties [
+    ContactProperties {
+      material1 "TILE"
+      material2 "NO_FRIC"
+      coulombFriction [
+        0
+      ]
+      bounce 0
+      bumpSound ""
+      rollSound ""
+      slideSound ""
+    }
+  ]
+}
+DEF Viewpoint Viewpoint {
+  orientation -0.6832622628548412 0.6832636853449736 0.25749449789711404 2.6375626232633524
+  position -0.08000000000000002 1.8000000000000003 1.5300000000000002
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+DEF WALLTILES Group {
+  children [
+    DEF TILE halfTile {
+      id "0"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      topWall 1
+      leftWall 1
+      tile4Walls [
+        0, 0, 1, 0
+      ]
+      tile1External [
+        TRUE
+        FALSE
+        FALSE
+        TRUE
+      ]
+      tile2External [
+        TRUE
+        FALSE
+        FALSE
+        FALSE
+      ]
+      tile3External [
+        FALSE
+        FALSE
+        FALSE
+        TRUE
+      ]
+      width 8
+      height 9
+      trap TRUE
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      zPos 1
+      floor TRUE
+      leftWall 1
+      leftExternal TRUE
+      width 8
+      height 9
+      id "1"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE halfTile {
+      zPos 2
+      id "2"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      bottomWall 5
+      leftWall 3
+      tile4Walls [
+        0, 0, 1, 0
+      ]
+      tile1External [
+        FALSE
+        FALSE
+        FALSE
+        TRUE
+      ]
+      tile3External [
+        FALSE
+        FALSE
+        TRUE
+        TRUE
+      ]
+      tile4External [
+        FALSE
+        FALSE
+        TRUE
+        FALSE
+      ]
+      width 8
+      height 9
+      trap TRUE
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      zPos 3
+      bottomWall 5
+      leftWall 6
+      width 8
+      height 9
+      id "3"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      zPos 4
+      floor TRUE
+      leftWall 2
+      topExternal TRUE
+      leftExternal TRUE
+      width 8
+      height 9
+      id "4"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE halfTile {
+      zPos 5
+      id "5"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      leftWall 3
+      tile3Walls [
+        0, 0, 5, 0
+      ]
+      tile1External [
+        FALSE
+        FALSE
+        FALSE
+        TRUE
+      ]
+      tile3External [
+        FALSE
+        FALSE
+        FALSE
+        TRUE
+      ]
+      width 8
+      height 9
+      floor TRUE
+      tileColor 0.635 0.635 0.635
+      room 2
+    }
+    DEF TILE worldTile {
+      zPos 6
+      floor TRUE
+      leftWall 2
+      leftExternal TRUE
+      width 8
+      height 9
+      id "6"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE halfTile {
+      zPos 7
+      id "7"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      leftWall 1
+      tile4Walls [
+        0, 0, 1, 0
+      ]
+      tile1External [
+        FALSE
+        FALSE
+        FALSE
+        TRUE
+      ]
+      tile3External [
+        FALSE
+        FALSE
+        FALSE
+        TRUE
+      ]
+      width 8
+      height 9
+      floor TRUE
+      tileColor 0.635 0.635 0.635
+      room 2
+    }
+    DEF TILE worldTile {
+      zPos 8
+      floor TRUE
+      bottomWall 5
+      leftWall 3
+      leftExternal TRUE
+      bottomExternal TRUE
+      width 8
+      height 9
+      id "8"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 1
+      floor TRUE
+      bottomWall 1
+      topWall 1
+      topExternal TRUE
+      width 8
+      height 9
+      id "9"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 1
+      zPos 1
+      floor TRUE
+      bottomWall 1
+      width 8
+      height 9
+      id "10"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 1
+      zPos 2
+      floor TRUE
+      bottomWall 1
+      bottomExternal TRUE
+      width 8
+      height 9
+      id "11"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 1
+      zPos 3
+      bottomWall 1
+      width 8
+      height 9
+      id "12"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 1
+      zPos 4
+      floor TRUE
+      bottomWall 1
+      topExternal TRUE
+      width 8
+      height 9
+      id "13"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 1
+      zPos 5
+      floor TRUE
+      bottomWall 1
+      width 8
+      height 9
+      id "14"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 1
+      zPos 6
+      floor TRUE
+      width 8
+      height 9
+      id "15"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 1
+      zPos 7
+      floor TRUE
+      bottomWall 1
+      width 8
+      height 9
+      id "16"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 1
+      zPos 8
+      bottomWall 1
+      bottomExternal TRUE
+      trap TRUE
+      width 8
+      height 9
+      id "17"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 2
+      floor TRUE
+      bottomWall 3
+      topWall 1
+      topExternal TRUE
+      width 8
+      height 9
+      id "18"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 2
+      zPos 1
+      floor TRUE
+      rightWall 6
+      bottomWall 3
+      rightExternal TRUE
+      width 8
+      height 9
+      id "19"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 2
+      zPos 2
+      floor TRUE
+      bottomWall 3
+      bottomExternal TRUE
+      width 8
+      height 9
+      id "20"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 2
+      zPos 3
+      rightWall 6
+      bottomWall 3
+      width 8
+      height 9
+      id "21"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 2
+      zPos 4
+      floor TRUE
+      bottomWall 1
+      topExternal TRUE
+      width 8
+      height 9
+      id "22"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 2
+      zPos 5
+      floor TRUE
+      bottomWall 1
+      width 8
+      height 9
+      id "23"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 2
+      zPos 6
+      floor TRUE
+      width 8
+      height 9
+      id "24"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 2
+      zPos 7
+      floor TRUE
+      bottomWall 1
+      width 8
+      height 9
+      id "25"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 2
+      zPos 8
+      floor TRUE
+      bottomWall 1
+      bottomExternal TRUE
+      width 8
+      height 9
+      id "26"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF START_TILE halfTile {
+      xPos 3
+      id "27"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      bottomWall 2
+      topWall 1
+      tile1External [
+        TRUE
+        FALSE
+        FALSE
+        FALSE
+      ]
+      tile2External [
+        TRUE
+        FALSE
+        FALSE
+        FALSE
+      ]
+      tile3External [
+        FALSE
+        FALSE
+        TRUE
+        FALSE
+      ]
+      tile4External [
+        FALSE
+        FALSE
+        TRUE
+        FALSE
+      ]
+      width 8
+      height 9
+      floor TRUE
+      start TRUE
+      tileColor 0.635 0.635 0.635
+      room 2
+    }
+    DEF TILE worldTile {
+      xPos 3
+      zPos 1
+      bottomWall 2
+      width 8
+      height 9
+      id "28"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 3
+      zPos 2
+      floor TRUE
+      topExternal TRUE
+      width 8
+      height 9
+      id "29"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE halfTile {
+      xPos 3
+      zPos 3
+      id "30"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      rightWall 2
+      tile1External [
+        FALSE
+        FALSE
+        FALSE
+        TRUE
+      ]
+      tile2External [
+        FALSE
+        TRUE
+        FALSE
+        FALSE
+      ]
+      tile3External [
+        FALSE
+        FALSE
+        FALSE
+        TRUE
+      ]
+      tile4External [
+        FALSE
+        TRUE
+        FALSE
+        FALSE
+      ]
+      width 8
+      height 9
+      floor TRUE
+      tileColor 0.635 0.635 0.635
+      room 2
+    }
+    DEF TILE worldTile {
+      xPos 3
+      zPos 4
+      floor TRUE
+      rightWall 3
+      bottomWall 3
+      rightExternal TRUE
+      width 8
+      height 9
+      id "31"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE halfTile {
+      xPos 3
+      zPos 5
+      id "32"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      bottomWall 1
+      width 8
+      height 9
+      floor TRUE
+      checkpoint TRUE
+      tileColor 0.635 0.635 0.635
+      room 2
+    }
+    DEF TILE worldTile {
+      xPos 3
+      zPos 6
+      floor TRUE
+      checkpoint TRUE
+      width 8
+      height 9
+      id "33"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 3
+      zPos 7
+      floor TRUE
+      bottomWall 1
+      checkpoint TRUE
+      width 8
+      height 9
+      id "34"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE halfTile {
+      xPos 3
+      zPos 8
+      id "35"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      bottomWall 1
+      tile3External [
+        FALSE
+        FALSE
+        TRUE
+        FALSE
+      ]
+      tile4External [
+        FALSE
+        FALSE
+        TRUE
+        FALSE
+      ]
+      width 8
+      height 9
+      floor TRUE
+      checkpoint TRUE
+      tileColor 0.635 0.635 0.635
+      room 2
+    }
+    DEF TILE worldTile {
+      xPos 4
+      floor TRUE
+      bottomWall 1
+      topWall 1
+      topExternal TRUE
+      bottomExternal TRUE
+      width 8
+      height 9
+      id "36"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 4
+      zPos 1
+      bottomWall 1
+      width 8
+      height 9
+      id "37"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 4
+      zPos 2
+      floor TRUE
+      bottomWall 5
+      topExternal TRUE
+      bottomExternal TRUE
+      width 8
+      height 9
+      id "38"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 4
+      zPos 3
+      width 8
+      height 9
+      id "39"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 4
+      zPos 4
+      bottomWall 2
+      width 8
+      height 9
+      id "40"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 4
+      zPos 5
+      floor TRUE
+      bottomWall 3
+      topExternal TRUE
+      width 8
+      height 9
+      id "41"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 4
+      zPos 6
+      floor TRUE
+      rightWall 2
+      rightExternal TRUE
+      checkpoint TRUE
+      width 8
+      height 9
+      id "42"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 4
+      zPos 7
+      floor TRUE
+      rightWall 3
+      bottomWall 3
+      rightExternal TRUE
+      checkpoint TRUE
+      width 8
+      height 9
+      id "43"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 4
+      zPos 8
+      floor TRUE
+      bottomWall 1
+      bottomExternal TRUE
+      width 8
+      height 9
+      id "44"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 5
+      floor TRUE
+      bottomWall 1
+      topWall 1
+      topExternal TRUE
+      bottomExternal TRUE
+      width 8
+      height 9
+      id "45"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 5
+      zPos 1
+      bottomWall 1
+      width 8
+      height 9
+      id "46"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 5
+      zPos 2
+      floor TRUE
+      bottomWall 1
+      topExternal TRUE
+      bottomExternal TRUE
+      width 8
+      height 9
+      id "47"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 5
+      zPos 3
+      width 8
+      height 9
+      id "48"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 5
+      zPos 4
+      bottomWall 1
+      width 8
+      height 9
+      id "49"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 5
+      zPos 5
+      floor TRUE
+      bottomWall 2
+      topExternal TRUE
+      bottomExternal TRUE
+      width 8
+      height 9
+      id "50"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 5
+      zPos 6
+      width 8
+      height 9
+      id "51"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 5
+      zPos 7
+      bottomWall 2
+      width 8
+      height 9
+      id "52"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 5
+      zPos 8
+      floor TRUE
+      bottomWall 1
+      topExternal TRUE
+      bottomExternal TRUE
+      width 8
+      height 9
+      id "53"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 6
+      floor TRUE
+      bottomWall 1
+      topWall 1
+      topExternal TRUE
+      bottomExternal TRUE
+      width 8
+      height 9
+      id "54"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 6
+      zPos 1
+      bottomWall 1
+      width 8
+      height 9
+      id "55"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 6
+      zPos 2
+      floor TRUE
+      bottomWall 1
+      topExternal TRUE
+      bottomExternal TRUE
+      width 8
+      height 9
+      id "56"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 6
+      zPos 3
+      width 8
+      height 9
+      id "57"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 6
+      zPos 4
+      bottomWall 1
+      width 8
+      height 9
+      id "58"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 6
+      zPos 5
+      floor TRUE
+      bottomWall 1
+      topExternal TRUE
+      bottomExternal TRUE
+      width 8
+      height 9
+      id "59"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 6
+      zPos 6
+      width 8
+      height 9
+      id "60"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 6
+      zPos 7
+      bottomWall 1
+      width 8
+      height 9
+      id "61"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 6
+      zPos 8
+      floor TRUE
+      bottomWall 1
+      topExternal TRUE
+      bottomExternal TRUE
+      width 8
+      height 9
+      id "62"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 7
+      floor TRUE
+      rightWall 6
+      bottomWall 3
+      topWall 3
+      topExternal TRUE
+      rightExternal TRUE
+      bottomExternal TRUE
+      swamp TRUE
+      width 8
+      height 9
+      id "63"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 7
+      zPos 1
+      rightWall 6
+      bottomWall 3
+      width 8
+      height 9
+      id "64"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 7
+      zPos 2
+      floor TRUE
+      rightWall 6
+      bottomWall 3
+      topExternal TRUE
+      rightExternal TRUE
+      bottomExternal TRUE
+      swamp TRUE
+      width 8
+      height 9
+      id "65"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 7
+      zPos 3
+      rightWall 2
+      width 8
+      height 9
+      id "66"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 7
+      zPos 4
+      rightWall 3
+      bottomWall 3
+      width 8
+      height 9
+      id "67"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 7
+      zPos 5
+      rightWall 6
+      bottomWall 3
+      topExternal TRUE
+      rightExternal TRUE
+      bottomExternal TRUE
+      trap TRUE
+      width 8
+      height 9
+      id "68"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 7
+      zPos 6
+      width 8
+      height 9
+      id "69"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE worldTile {
+      xPos 7
+      zPos 7
+      bottomWall 3
+      width 8
+      height 9
+      id "70"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+    DEF TILE halfTile {
+      xPos 7
+      zPos 8
+      id "71"
+      xScale 0.4
+      zScale 0.4
+      yScale 0.4
+      rightWall 6
+      bottomWall 3
+      tile2Walls [
+        0, 1, 0, 0
+      ]
+      tile1External [
+        TRUE
+        FALSE
+        FALSE
+        FALSE
+      ]
+      tile2External [
+        TRUE
+        TRUE
+        FALSE
+        FALSE
+      ]
+      tile3External [
+        FALSE
+        FALSE
+        TRUE
+        FALSE
+      ]
+      tile4External [
+        FALSE
+        TRUE
+        TRUE
+        FALSE
+      ]
+      width 8
+      height 9
+      floor TRUE
+      swamp TRUE
+      tileColor 0.635 0.635 0.635
+      room 1
+    }
+  ]
+}
+DEF CHECKPOINTBOUNDS Group {
+  children [
+    DEF boundary Group {
+      children [
+        DEF checkpoint0min Pose {
+          translation -0.18 -0.03 5.551115123125783e-17
+        }
+        DEF checkpoint0max Pose {
+          translation -0.06 -0.03 0.12000000000000005
+        }
+      ]
+    }
+    DEF boundary Group {
+      children [
+        DEF checkpoint1min Pose {
+          translation -0.18 -0.03 0.11999999999999994
+        }
+        DEF checkpoint1max Pose {
+          translation -0.06 -0.03 0.23999999999999994
+        }
+      ]
+    }
+    DEF boundary Group {
+      children [
+        DEF checkpoint2min Pose {
+          translation -0.18 -0.03 0.24000000000000005
+        }
+        DEF checkpoint2max Pose {
+          translation -0.06 -0.03 0.36000000000000004
+        }
+      ]
+    }
+    DEF boundary Group {
+      children [
+        DEF checkpoint3min Pose {
+          translation -0.18 -0.03 0.35999999999999993
+        }
+        DEF checkpoint3max Pose {
+          translation -0.06 -0.03 0.4799999999999999
+        }
+      ]
+    }
+    DEF boundary Group {
+      children [
+        DEF checkpoint4min Pose {
+          translation -0.06 -0.03 0.11999999999999994
+        }
+        DEF checkpoint4max Pose {
+          translation 0.06 -0.03 0.23999999999999994
+        }
+      ]
+    }
+    DEF boundary Group {
+      children [
+        DEF checkpoint5min Pose {
+          translation -0.06 -0.03 0.24000000000000005
+        }
+        DEF checkpoint5max Pose {
+          translation 0.06 -0.03 0.36000000000000004
+        }
+      ]
+    }
+  ]
+}
+DEF TRAPBOUNDS Group {
+  children [
+    DEF boundary Group {
+      children [
+        DEF trap0min Pose {
+          translation -0.54 -0.03 -0.6000000000000001
+        }
+        DEF trap0max Pose {
+          translation -0.42 -0.03 -0.48000000000000004
+        }
+      ]
+    }
+    DEF boundary Group {
+      children [
+        DEF trap1min Pose {
+          translation -0.54 -0.03 -0.36000000000000004
+        }
+        DEF trap1max Pose {
+          translation -0.42 -0.03 -0.24000000000000005
+        }
+      ]
+    }
+    DEF boundary Group {
+      children [
+        DEF trap2min Pose {
+          translation -0.42 -0.03 0.35999999999999993
+        }
+        DEF trap2max Pose {
+          translation -0.3 -0.03 0.4799999999999999
+        }
+      ]
+    }
+    DEF boundary Group {
+      children [
+        DEF trap3min Pose {
+          translation 0.3000000000000001 -0.03 5.551115123125783e-17
+        }
+        DEF trap3max Pose {
+          translation 0.4200000000000001 -0.03 0.12000000000000005
+        }
+      ]
+    }
+  ]
+}
+DEF STARTBOUNDS Group {
+  children [
+    DEF boundary Group {
+      children [
+        DEF start0min Pose {
+          translation -0.18 -0.03 -0.6000000000000001
+        }
+        DEF start0max Pose {
+          translation -0.06 -0.03 -0.48000000000000004
+        }
+      ]
+    }
+  ]
+}
+DEF SWAMPBOUNDS Group {
+  children [
+    DEF boundary Group {
+      children [
+        DEF swamp0min Pose {
+          translation 0.3000000000000001 -0.03 -0.6000000000000001
+        }
+        DEF swamp0max Pose {
+          translation 0.4200000000000001 -0.03 -0.48000000000000004
+        }
+      ]
+    }
+    DEF boundary Group {
+      children [
+        DEF swamp1min Pose {
+          translation 0.3000000000000001 -0.03 -0.36000000000000004
+        }
+        DEF swamp1max Pose {
+          translation 0.4200000000000001 -0.03 -0.24000000000000005
+        }
+      ]
+    }
+    DEF boundary Group {
+      children [
+        DEF swamp2min Pose {
+          translation 0.3000000000000001 -0.03 0.35999999999999993
+        }
+        DEF swamp2max Pose {
+          translation 0.4200000000000001 -0.03 0.4799999999999999
+        }
+      ]
+    }
+  ]
+}
+DEF OBSTACLES Group {
+}
+DEF HUMANGROUP Group {
+}
+DEF HAZARDGROUP Group {
+  children [
+    HazardMap {
+      translation -0.12 0 -0.48560000000000003
+      rotation 0 1 0 0
+      name "Hazard0"
+      type "X"
+    }
+    HazardMap {
+      translation -0.1744 0 -0.21000000000000005
+      rotation 0 1 0 -1.57
+      name "Hazard1"
+    }
+    HazardMap {
+      translation -0.06559999999999999 0 -0.15000000000000005
+      rotation 0 1 0 1.57
+      name "Hazard2"
+      type "Y"
+    }
+    HazardMap {
+      translation -0.15 0 0.005600000000000049
+      rotation 0 1 0 3.14
+      name "Hazard3"
+      type "Z"
+    }
+    HazardMap {
+      translation -0.09 0 0.11440000000000006
+      rotation 0 1 0 0
+      name "Hazard4"
+    }
+    HazardMap {
+      translation -0.15 0 0.3655999999999999
+      rotation 0 1 0 3.14
+      name "Hazard5"
+    }
+    HazardMap {
+      translation -0.09 0 0.3655999999999999
+      rotation 0 1 0 3.14
+      name "Hazard6"
+      type "A"
+    }
+  ]
+}
+DEF MAINSUPERVISOR Robot {
+  children [
+    Receiver {
+      channel 1
+    }
+    Emitter {
+      channel 1
+    }
+  ]
+  controller "MainSupervisor"
+  customData "480"
+  supervisor TRUE
+  window "MainSupervisorWindow"
+}
