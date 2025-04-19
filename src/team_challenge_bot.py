@@ -1000,10 +1000,10 @@ def move_one_tile_backwards(tile_size=TILE_WIDTH):
         # if the robot is inclined to the right, we should make the robot move slightly to the left
         if angle_difference > 0:
             s1 = -6.28
-            s2 = -4
+            s2 = -6
         else:
             # if the robot is inclined to the left, we should make the robot move slightly to the right
-            s1 = -4
+            s1 = -6
             s2 = -6.28
 
         # start moving the robot with the calculated wheel velocities
@@ -1144,6 +1144,7 @@ def get_time_remaining():
 
 def has_finished_exploring() -> bool:
     global fgrid, fmin_x, fmin_y, fmax_x, fmax_y
+    return False
     
     t = get_time_remaining()
     
